@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Bell,
   Search,
@@ -10,7 +10,8 @@ import {
   AlertTriangle,
   Book,
   CheckCircle,
-  Info
+  Info,
+  Database
 } from 'lucide-react';
 import { ViewType, Role, User, Training, RecentActivity, SystemLog } from './types';
 import {
@@ -40,6 +41,142 @@ export default function App() {
   const [trainings, setTrainings] = useState<Training[]>(INITIAL_TRAININGS);
   const [recentActivities, setRecentActivities] = useState<RecentActivity[]>(INITIAL_ACTIVITIES);
   const [systemLogs, setSystemLogs] = useState<SystemLog[]>(INITIAL_SYSTEM_LOGS);
+
+  const [dbConnected, setDbConnected] = useState(false);
+
+  // Synchronously fetch connection status and data on startup
+  useEffect(() => {
+    async function initDbData() {
+      try {
+        const statusRes = await fetch("/api/db/status").then(r => r.json());
+        setDbConnected(!!statusRes.configured);
+
+        const [usersData, trainingsData, activitiesData, logsData] = await Promise.all([
+          fetch("/api/db/users").then(r => r.json()),
+          fetch("/api/db/trainings").then(r => r.json()),
+          fetch("/api/db/activities").then(r => r.json()),
+          fetch("/api/db/logs").then(r => r.json())
+        ]);
+
+        if (Array.isArray(usersData)) setUsers(usersData);
+        if (Array.isArray(trainingsData)) setTrainings(trainingsData);
+        if (Array.isArray(activitiesData)) setRecentActivities(activitiesData);
+        if (Array.isArray(logsData)) setSystemLogs(logsData);
+      } catch (err) {
+        console.error("Error communicating with integration backend:", err);
+      }
+    }
+    initDbData();
+  }, []);
+
+  // Sync state changes with Supabase backend endpoints
+  const syncSetUsers = (action: React.SetStateAction<User[]>) => {
+    setUsers((prevUsers) => {
+      const nextValue = typeof action === 'function' ? (action as any)(prevUsers) : action;
+
+      if (nextValue.length > prevUsers.length) {
+        const added = nextValue.find(nu => !prevUsers.some(ou => ou.id === nu.id));
+        if (added) {
+          fetch("/api/db/users", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(added)
+          }).catch(err => console.error("Error syncing added user:", err));
+        }
+      } else if (nextValue.length < prevUsers.length) {
+        const deleted = prevUsers.find(ou => !nextValue.some(nu => nu.id === ou.id));
+        if (deleted) {
+          fetch(`/api/db/users/${deleted.id}`, { method: "DELETE" }).catch(err => console.error("Error syncing deleted user:", err));
+        }
+      } else {
+        nextValue.forEach(nu => {
+          const ou = prevUsers.find(o => o.id === nu.id);
+          if (ou && JSON.stringify(ou) !== JSON.stringify(nu)) {
+            fetch("/api/db/users", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(nu)
+            }).catch(err => console.error("Error syncing updated user:", err));
+          }
+        });
+      }
+
+      return nextValue;
+    });
+  };
+
+  const syncSetTrainings = (action: React.SetStateAction<Training[]>) => {
+    setTrainings((prevTrainings) => {
+      const nextValue = typeof action === 'function' ? (action as any)(prevTrainings) : action;
+
+      if (nextValue.length > prevTrainings.length) {
+        const added = nextValue.find(nt => !prevTrainings.some(ot => ot.id === nt.id));
+        if (added) {
+          fetch("/api/db/trainings", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(added)
+          }).catch(err => console.error("Error syncing added training:", err));
+        }
+      } else if (nextValue.length < prevTrainings.length) {
+        const deleted = prevTrainings.find(ot => !nextValue.some(nt => nt.id === ot.id));
+        if (deleted) {
+          fetch(`/api/db/trainings/${deleted.id}`, { method: "DELETE" }).catch(err => console.error("Error syncing deleted training:", err));
+        }
+      } else {
+        nextValue.forEach(nt => {
+          const ot = prevTrainings.find(o => o.id === nt.id);
+          if (ot && JSON.stringify(ot) !== JSON.stringify(nt)) {
+            fetch("/api/db/trainings", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(nt)
+            }).catch(err => console.error("Error syncing updated training:", err));
+          }
+        });
+      }
+
+      return nextValue;
+    });
+  };
+
+  const syncSetRecentActivities = (action: React.SetStateAction<RecentActivity[]>) => {
+    setRecentActivities((prevActivities) => {
+      const nextValue = typeof action === 'function' ? (action as any)(prevActivities) : action;
+
+      if (nextValue.length > prevActivities.length) {
+        const added = nextValue.find(na => !prevActivities.some(oa => oa.id === na.id));
+        if (added) {
+          fetch("/api/db/activities", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(added)
+          }).catch(err => console.error("Error syncing added activity:", err));
+        }
+      }
+
+      return nextValue;
+    });
+  };
+
+  const syncSetSystemLogs = (action: React.SetStateAction<SystemLog[]>) => {
+    setSystemLogs((prevLogs) => {
+      const nextValue = typeof action === 'function' ? (action as any)(prevLogs) : action;
+
+      if (nextValue.length > prevLogs.length) {
+        const added = nextValue.find(nl => !prevLogs.some(ol => ol.id === nl.id));
+        if (added) {
+          fetch("/api/db/logs", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(added)
+          }).catch(err => console.error("Error syncing added log:", err));
+        }
+      }
+
+      return nextValue;
+    });
+  };
 
   const [currentUserEmail, setCurrentUserEmail] = useState<string | null>(null);
   const [currentView, setView] = useState<ViewType>('student-dashboard');
@@ -125,7 +262,7 @@ export default function App() {
         avatar: `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(name)}`
       };
 
-      setUsers((prev) => [newUser, ...prev]);
+      syncSetUsers((prev) => [newUser, ...prev]);
       setCurrentUserEmail(email);
       setRole(determinedRole);
       setIsLoggedIn(true);
@@ -179,12 +316,12 @@ export default function App() {
           />
         );
       case 'admin-users':
-        return <UserManagementView users={users} setUsers={setUsers} />;
+        return <UserManagementView users={users} setUsers={syncSetUsers} />;
       case 'admin-trainings':
         return (
           <TrainingsView
             trainings={trainings}
-            setTrainings={setTrainings}
+            setTrainings={syncSetTrainings}
             setView={setView}
             onEditTraining={(t) => {
               setSelectedTrainingForEdit(t);
@@ -196,14 +333,14 @@ export default function App() {
         return (
           <CreateTrainingView
             trainings={trainings}
-            setTrainings={setTrainings}
+            setTrainings={syncSetTrainings}
             setView={setView}
             editingTraining={selectedTrainingForEdit}
             clearEditingTraining={() => setSelectedTrainingForEdit(null)}
           />
         );
       case 'admin-reports':
-        return <ReportsView systemLogs={systemLogs} setSystemLogs={setSystemLogs} />;
+        return <ReportsView systemLogs={systemLogs} setSystemLogs={syncSetSystemLogs} />;
       case 'student-dashboard':
         return (
           <StudentDashboardView
@@ -267,6 +404,15 @@ export default function App() {
               <ShieldCheck className="h-3.5 w-3.5" />
               <span className="hidden sm:inline">Conformidade Ativa</span>
               <span className="sm:hidden">Ativa</span>
+            </span>
+            <span className={`p-1 px-2.5 rounded-lg text-xs font-bold leading-normal border flex items-center gap-1 ${
+              dbConnected 
+                ? 'bg-emerald-50 text-emerald-700 border-emerald-100' 
+                : 'bg-amber-50 text-amber-700 border-amber-100'
+            }`}>
+              <Database className="h-3.5 w-3.5 animate-pulse" />
+              <span className="hidden sm:inline">{dbConnected ? 'Supabase Conectado' : 'Modo In-Memory'}</span>
+              <span className="sm:hidden">{dbConnected ? 'DB Active' : 'Offline'}</span>
             </span>
           </div>
 

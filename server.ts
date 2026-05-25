@@ -1,12 +1,120 @@
 import express from "express";
 import path from "path";
 import { createServer as createViteServer } from "vite";
+import {
+  getUsers,
+  upsertUser,
+  deleteUser,
+  getTrainings,
+  upsertTraining,
+  deleteTraining,
+  getActivities,
+  addActivity,
+  getLogs,
+  addLog,
+  isSupabaseConfigured
+} from "./server/supabase";
 
 async function startServer() {
   const app = express();
   const PORT = 3000;
 
   app.use(express.json());
+
+  // === Supabase proxy API endpoints ===
+  app.get("/api/db/status", (req, res) => {
+    res.json({ configured: isSupabaseConfigured() });
+  });
+
+  app.get("/api/db/users", async (req, res) => {
+    try {
+      const data = await getUsers();
+      res.json(data);
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.post("/api/db/users", async (req, res) => {
+    try {
+      const data = await upsertUser(req.body);
+      res.json(data);
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.delete("/api/db/users/:id", async (req, res) => {
+    try {
+      const success = await deleteUser(req.params.id);
+      res.json({ success });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.get("/api/db/trainings", async (req, res) => {
+    try {
+      const data = await getTrainings();
+      res.json(data);
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.post("/api/db/trainings", async (req, res) => {
+    try {
+      const data = await upsertTraining(req.body);
+      res.json(data);
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.delete("/api/db/trainings/:id", async (req, res) => {
+    try {
+      const success = await deleteTraining(req.params.id);
+      res.json({ success });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.get("/api/db/activities", async (req, res) => {
+    try {
+      const data = await getActivities();
+      res.json(data);
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.post("/api/db/activities", async (req, res) => {
+    try {
+      const data = await addActivity(req.body);
+      res.json(data);
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.get("/api/db/logs", async (req, res) => {
+    try {
+      const data = await getLogs();
+      res.json(data);
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.post("/api/db/logs", async (req, res) => {
+    try {
+      const data = await addLog(req.body);
+      res.json(data);
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
 
   // API Route: Dynamic Course Outline Generator
   app.post("/api/gemini/generate-outline", async (req, res) => {

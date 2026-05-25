@@ -28,14 +28,30 @@ export default function LoginView({ onLogin, users }: LoginViewProps) {
     e.preventDefault();
     setError('');
 
+    const lowercaseEmail = email.trim().toLowerCase();
+
     if (isRegistering) {
-      if (!name || !email || !password) {
+      if (!name.trim() || !email.trim() || !password) {
         setError('Por favor, preencha todos os campos para se cadastrar!');
         return;
       }
+      
+      const exists = users.some((u) => u.email.toLowerCase() === lowercaseEmail);
+      if (exists) {
+        setError('Este endereço de e-mail corporativo já está cadastrado no sistema!');
+        return;
+      }
+
+      if (password.length < 6) {
+        setError('A senha corporativa de segurança deve conter no mínimo 6 caracteres!');
+        return;
+      }
+
       setIsLoading(true);
       setTimeout(() => {
         setIsLoading(false);
+        // Save password in localStorage for subsequent login checks
+        localStorage.setItem(`educorporate_pwd_${lowercaseEmail}`, password);
         // Call parent login with the newly created credential
         onLogin(name, email);
       }, 700);
@@ -49,12 +65,22 @@ export default function LoginView({ onLogin, users }: LoginViewProps) {
       setTimeout(() => {
         setIsLoading(false);
         // Look up user by email to retrieve their mapped name
-        const match = users.find((u) => u.email.toLowerCase() === email.toLowerCase());
+        const match = users.find((u) => u.email.toLowerCase() === lowercaseEmail);
+        
+        // Predefined or saved password (default fallback to '123456')
+        const correctPassword = localStorage.getItem(`educorporate_pwd_${lowercaseEmail}`) || '123456';
+        
+        if (password !== correctPassword) {
+          setError('Senha corporativa incorreta! Por favor, utilize a senha de acesso válida (padrão de testes: 123456).');
+          return;
+        }
+
         if (match) {
           onLogin(match.name, match.email);
         } else {
-          // If the email doesn't exist, we auto-create but let's prompt them with the name
-          // or derive a name from their email address
+          // If the email doesn't exist, we auto-create but save this password for them first
+          localStorage.setItem(`educorporate_pwd_${lowercaseEmail}`, password);
+          
           const derivedName = email.split('@')[0]
             .split('.')
             .map(word => word.charAt(0).toUpperCase() + word.slice(1))
