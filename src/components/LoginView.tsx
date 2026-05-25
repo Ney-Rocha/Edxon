@@ -29,6 +29,13 @@ export default function LoginView({ onLogin, users }: LoginViewProps) {
     setError('');
 
     const lowercaseEmail = email.trim().toLowerCase();
+    
+    // 1. Strict email format validation with Regex
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(lowercaseEmail)) {
+      setError('Por favor, insira um endereço de e-mail válido (exemplo: colaborador@educorp.com).');
+      return;
+    }
 
     if (isRegistering) {
       if (!name.trim() || !email.trim() || !password) {
@@ -60,33 +67,26 @@ export default function LoginView({ onLogin, users }: LoginViewProps) {
         setError('Por favor, preencha o e-mail corporativo e a senha!');
         return;
       }
+
+      // 2. Strict email registration check for standard login
+      const match = users.find((u) => u.email.toLowerCase() === lowercaseEmail);
+      if (!match) {
+        setError('Este e-mail corporativo não está cadastrado! Por favor, registre-se primeiro na opção abaixo.');
+        return;
+      }
       
+      // Predefined or saved password (default fallback to '123456')
+      const correctPassword = localStorage.getItem(`educorporate_pwd_${lowercaseEmail}`) || '123456';
+      
+      if (password !== correctPassword) {
+        setError('Senha corporativa incorreta! Por favor, utilize a senha de acesso válida (padrão de testes: 123456).');
+        return;
+      }
+
       setIsLoading(true);
       setTimeout(() => {
         setIsLoading(false);
-        // Look up user by email to retrieve their mapped name
-        const match = users.find((u) => u.email.toLowerCase() === lowercaseEmail);
-        
-        // Predefined or saved password (default fallback to '123456')
-        const correctPassword = localStorage.getItem(`educorporate_pwd_${lowercaseEmail}`) || '123456';
-        
-        if (password !== correctPassword) {
-          setError('Senha corporativa incorreta! Por favor, utilize a senha de acesso válida (padrão de testes: 123456).');
-          return;
-        }
-
-        if (match) {
-          onLogin(match.name, match.email);
-        } else {
-          // If the email doesn't exist, we auto-create but save this password for them first
-          localStorage.setItem(`educorporate_pwd_${lowercaseEmail}`, password);
-          
-          const derivedName = email.split('@')[0]
-            .split('.')
-            .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-            .join(' ');
-          onLogin(derivedName, email);
-        }
+        onLogin(match.name, match.email);
       }, 700);
     }
   };

@@ -1,5 +1,5 @@
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
-import { User, Training, RecentActivity, SystemLog } from "../src/types";
+import { User, Training, RecentActivity, SystemLog, Role, UserStatus } from "../src/types";
 import { INITIAL_USERS, INITIAL_TRAININGS, INITIAL_ACTIVITIES, INITIAL_SYSTEM_LOGS } from "../src/data";
 
 let supabaseInstance: SupabaseClient | null = null;
@@ -53,6 +53,88 @@ export function isSupabaseConfigured(): boolean {
 // USER CRUD OPERATIONS
 // ==========================================
 
+// Diagnostic utility to provide detailed information on Database/Supabase errors
+function handleAndLogDbError(context: string, err: any) {
+  if (!err) return;
+  
+  let friendlyMessage = "";
+  const code = err.code || (err as any).statusCode || (err as any).status;
+  const details = err.details || "";
+  const message = err.message || "";
+  const hint = err.hint || "";
+  
+  if (code === "42P01") {
+    friendlyMessage = "⚠️ [Tabela não encontrada] A tabela correspondente a esta operação não foi criada no seu banco de dados Supabase. Por favor, copie todo o conteúdo do arquivo 'supabase_migration.sql' e execute-o no 'SQL Editor' do seu painel do Supabase para criar as tabelas e dados iniciais!";
+  } else if (code === "42501" || message.toLowerCase().includes("row-level security")) {
+    friendlyMessage = "⚠️ [Restrição de Segurança / RLS] A segurança em nível de linha (RLS) está ativa nesta tabela no Supabase, impedindo a gravação de dados com a chave anônima. Por favor, desative o RLS (Disable RLS) para esta tabela no seu painel do Supabase, ou adicione uma política permissiva ('Enable read/write for all users').";
+  } else if (code === "23514") {
+    friendlyMessage = "⚠️ [Restrição de Valor / CHECK Constraint] O valor enviado para uma das colunas (por exemplo, status ou role) viola uma restrição de validação (CHECK) definida na tabela do banco de dados. Exemplo: se o banco de dados só aceita 'Administrador', tentar inserir 'Admin' causará este erro.";
+  } else if (code === "23505") {
+    friendlyMessage = "⚠️ [Duplicação de Chave / UNIQUE] Um registro com esta chave primária ou endereço de e-mail já existe no banco de dados, violando a regra de valor único.";
+  } else if (code === "23502") {
+    friendlyMessage = "⚠️ [Coluna Obrigatória / NOT NULL] Tentativa de inserir registro com valor nulo em uma coluna obrigatória. Verifique as propriedades enviadas.";
+  }
+
+  console.error("\n" + "=".repeat(80));
+  console.error(`🚨 ERRO DA INTEGRAÇÃO SUPABASE NA OPERAÇÃO [${context}]`);
+  console.error(`Mensagem: ${message}`);
+  if (code) console.error(`Código do Erro DB: ${code}`);
+  if (details) console.error(`Detalhes: ${details}`);
+  if (hint) console.error(`Sugestão DB: ${hint}`);
+  if (friendlyMessage) {
+    console.error(`\n💡 RESOLUÇÃO RECOMENDADA:\n${friendlyMessage}`);
+  }
+  console.error("Objeto de erro completo:");
+  console.error(JSON.stringify(err, null, 2));
+  console.error("=".repeat(80) + "\n");
+}
+
+// Helper functions to map roles and statuses seamlessly between client types and DB constraints
+function mapDbUserToClient(dbUser: any): User {
+  let mappedRole: Role = "Usuário";
+  if (dbUser.role === "Admin" || dbUser.role === "Administrador") {
+    mappedRole = "Admin";
+  }
+
+  let mappedStatus: UserStatus = "Ativo";
+  if (dbUser.status === "Suspenso" || dbUser.status === "Inativo") {
+    mappedStatus = "Inativo";
+  } else if (dbUser.status === "Pendente") {
+    mappedStatus = "Pendente";
+  }
+
+  return {
+    id: dbUser.id,
+    name: dbUser.name,
+    email: dbUser.email,
+    role: mappedRole,
+    status: mappedStatus,
+    avatar: dbUser.avatar
+  };
+}
+
+function mapClientUserToDb(clientUser: User): any {
+  // Let the DB accept both "Admin" and "Administrador" to be fully safe with check constraints
+  const dbRole = clientUser.role === "Admin" ? "Admin" : "Usuário";
+  
+  // Ensure the DB accepts both 'Inativo', 'Pendente', 'Suspenso', or 'Ativo'
+  let dbStatus = "Ativo";
+  if (clientUser.status === "Inativo") {
+    dbStatus = "Inativo";
+  } else if (clientUser.status === "Pendente") {
+    dbStatus = "Pendente";
+  }
+
+  return {
+    id: clientUser.id,
+    name: clientUser.name,
+    email: clientUser.email,
+    role: dbRole,
+    status: dbStatus,
+    avatar: clientUser.avatar
+  };
+}
+
 export async function getUsers(): Promise<User[]> {
   const client = getSupabaseClient();
   if (!client) return localUsers;
@@ -61,22 +143,16 @@ export async function getUsers(): Promise<User[]> {
     const { data, error } = await client.from("users").select("*");
     if (error) throw error;
     if (data && data.length > 0) {
-      return data as User[];
+      return data.map(mapDbUserToClient);
     }
     // If Supabase table is empty, seed it with initial users
     for (const u of localUsers) {
-      await client.from("users").upsert({
-        id: u.id,
-        name: u.name,
-        email: u.email,
-        role: u.role,
-        status: u.status,
-        avatar: u.avatar
-      });
+      const { error: insertErr } = await client.from("users").upsert(mapClientUserToDb(u));
+      if (insertErr) handleAndLogDbError("seed-user", insertErr);
     }
     return localUsers;
   } catch (err) {
-    console.error("[Supabase] getUsers error, using local fallback:", err);
+    handleAndLogDbError("getUsers", err);
     return localUsers;
   }
 }
@@ -94,17 +170,10 @@ export async function upsertUser(user: User): Promise<User> {
   if (!client) return user;
 
   try {
-    const { error } = await client.from("users").upsert({
-      id: user.id,
-      name: user.name,
-      email: user.email,
-      role: user.role,
-      status: user.status,
-      avatar: user.avatar
-    });
+    const { error } = await client.from("users").upsert(mapClientUserToDb(user));
     if (error) throw error;
   } catch (err) {
-    console.error("[Supabase] upsertUser error:", err);
+    handleAndLogDbError("upsertUser", err);
   }
   return user;
 }
@@ -120,7 +189,7 @@ export async function deleteUser(id: string): Promise<boolean> {
     if (error) throw error;
     return true;
   } catch (err) {
-    console.error(`[Supabase] deleteUser error for id ${id}:`, err);
+    handleAndLogDbError("deleteUser", err);
     return false;
   }
 }
@@ -154,7 +223,7 @@ export async function getTrainings(): Promise<Training[]> {
     }
     // Seed trainings table if empty
     for (const t of localTrainings) {
-      await client.from("trainings").upsert({
+      const { error: insertErr } = await client.from("trainings").upsert({
         id: t.id,
         title: t.title,
         category: t.category,
@@ -166,10 +235,11 @@ export async function getTrainings(): Promise<Training[]> {
         updated_date: t.updatedDate,
         description: t.description
       });
+      if (insertErr) handleAndLogDbError("seed-training", insertErr);
     }
     return localTrainings;
   } catch (err) {
-    console.error("[Supabase] getTrainings error, using local fallback:", err);
+    handleAndLogDbError("getTrainings", err);
     return localTrainings;
   }
 }
@@ -200,7 +270,7 @@ export async function upsertTraining(training: Training): Promise<Training> {
     });
     if (error) throw error;
   } catch (err) {
-    console.error("[Supabase] upsertTraining error:", err);
+    handleAndLogDbError("upsertTraining", err);
   }
   return training;
 }
@@ -216,7 +286,7 @@ export async function deleteTraining(id: string): Promise<boolean> {
     if (error) throw error;
     return true;
   } catch (err) {
-    console.error(`[Supabase] deleteTraining error for id ${id}:`, err);
+    handleAndLogDbError("deleteTraining", err);
     return false;
   }
 }
@@ -249,7 +319,7 @@ export async function getActivities(): Promise<RecentActivity[]> {
     }
     // Seed empty table
     for (const act of localActivities) {
-      await client.from("activities").insert({
+      const { error: insertErr } = await client.from("activities").insert({
         id: act.id,
         user_name: act.user.name,
         user_avatar: act.user.avatar,
@@ -257,10 +327,11 @@ export async function getActivities(): Promise<RecentActivity[]> {
         status: act.status,
         time: act.time,
       });
+      if (insertErr) handleAndLogDbError("seed-activity", insertErr);
     }
     return localActivities;
   } catch (err) {
-    console.error("[Supabase] getActivities error:", err);
+    handleAndLogDbError("getActivities", err);
     return localActivities;
   }
 }
@@ -283,7 +354,7 @@ export async function addActivity(act: RecentActivity): Promise<RecentActivity> 
     });
     if (error) throw error;
   } catch (err) {
-    console.error("[Supabase] addActivity error:", err);
+    handleAndLogDbError("addActivity", err);
   }
   return act;
 }
@@ -320,7 +391,7 @@ export async function getLogs(): Promise<SystemLog[]> {
     }
     // Seed empty table
     for (const log of localLogs) {
-      await client.from("system_logs").insert({
+      const { error: insertErr } = await client.from("system_logs").insert({
         id: log.id,
         timestamp: log.timestamp,
         user_name: log.user.name,
@@ -332,10 +403,11 @@ export async function getLogs(): Promise<SystemLog[]> {
         ip: log.ip,
         status: log.status,
       });
+      if (insertErr) handleAndLogDbError("seed-log", insertErr);
     }
     return localLogs;
   } catch (err) {
-    console.error("[Supabase] getLogs error:", err);
+    handleAndLogDbError("getLogs", err);
     return localLogs;
   }
 }
@@ -362,7 +434,7 @@ export async function addLog(log: SystemLog): Promise<SystemLog> {
     });
     if (error) throw error;
   } catch (err) {
-    console.error("[Supabase] addLog error:", err);
+    handleAndLogDbError("addLog", err);
   }
   return log;
 }

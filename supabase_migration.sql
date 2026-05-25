@@ -18,8 +18,8 @@ create table if not exists users (
     id text primary key,
     name text not null,
     email text unique not null,
-    role text not null check (role in ('Administrador', 'Usuário')),
-    status text not null check (status in ('Ativo', 'Suspenso')),
+    role text not null check (role in ('Admin', 'Administrador', 'Usuário')),
+    status text not null check (status in ('Ativo', 'Pendente', 'Inativo', 'Suspenso')),
     avatar text,
     created_at timestamp with time zone default timezone('utc'::text, now())
 );
