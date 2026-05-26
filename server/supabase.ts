@@ -114,16 +114,11 @@ function mapDbUserToClient(dbUser: any): User {
 }
 
 function mapClientUserToDb(clientUser: User): any {
-  // Let the DB accept both "Admin" and "Administrador" to be fully safe with check constraints
-  const dbRole = clientUser.role === "Admin" ? "Admin" : "Usuário";
+  // Map "Admin" to "Administrador" and anything else to "Usuário" to respect original check constraints on role
+  const dbRole = clientUser.role === "Admin" ? "Administrador" : "Usuário";
   
-  // Ensure the DB accepts both 'Inativo', 'Pendente', 'Suspenso', or 'Ativo'
-  let dbStatus = "Ativo";
-  if (clientUser.status === "Inativo") {
-    dbStatus = "Inativo";
-  } else if (clientUser.status === "Pendente") {
-    dbStatus = "Pendente";
-  }
+  // Map non-Ativo states to "Suspenso" to respect original check constraints on status (Ativo / Suspenso)
+  const dbStatus = clientUser.status === "Ativo" ? "Ativo" : "Suspenso";
 
   return {
     id: clientUser.id,
@@ -174,6 +169,7 @@ export async function upsertUser(user: User): Promise<User> {
     if (error) throw error;
   } catch (err) {
     handleAndLogDbError("upsertUser", err);
+    throw err;
   }
   return user;
 }
@@ -190,7 +186,7 @@ export async function deleteUser(id: string): Promise<boolean> {
     return true;
   } catch (err) {
     handleAndLogDbError("deleteUser", err);
-    return false;
+    throw err;
   }
 }
 
@@ -271,6 +267,7 @@ export async function upsertTraining(training: Training): Promise<Training> {
     if (error) throw error;
   } catch (err) {
     handleAndLogDbError("upsertTraining", err);
+    throw err;
   }
   return training;
 }
@@ -287,7 +284,7 @@ export async function deleteTraining(id: string): Promise<boolean> {
     return true;
   } catch (err) {
     handleAndLogDbError("deleteTraining", err);
-    return false;
+    throw err;
   }
 }
 
@@ -355,6 +352,7 @@ export async function addActivity(act: RecentActivity): Promise<RecentActivity> 
     if (error) throw error;
   } catch (err) {
     handleAndLogDbError("addActivity", err);
+    throw err;
   }
   return act;
 }
@@ -435,6 +433,7 @@ export async function addLog(log: SystemLog): Promise<SystemLog> {
     if (error) throw error;
   } catch (err) {
     handleAndLogDbError("addLog", err);
+    throw err;
   }
   return log;
 }

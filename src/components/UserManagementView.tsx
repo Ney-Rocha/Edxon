@@ -9,7 +9,9 @@ import {
   AlertTriangle,
   UserPlus,
   RefreshCw,
-  Edit
+  Edit,
+  Upload,
+  Image
 } from 'lucide-react';
 import { User, Role, UserStatus } from '../types';
 
@@ -29,12 +31,34 @@ export default function UserManagementView({ users, setUsers }: UserManagementVi
   const [newEmail, setNewEmail] = useState('');
   const [newRole, setNewRole] = useState<Role>('Usuário');
   const [newStatus, setNewStatus] = useState<UserStatus>('Ativo');
+  const [newAvatar, setNewAvatar] = useState<string>('');
 
   // Editing User Form State
   const [editingUser, setEditingUser] = useState<User | null>(null);
 
   // Deletion Confirmation state
   const [userToDelete, setUserToDelete] = useState<User | null>(null);
+
+  // Read upload file as Base64 helper
+  const handleAvatarFileChange = (e: React.ChangeEvent<HTMLInputElement>, isEditMode = false) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 2 * 1024 * 1024) {
+        alert('Por favor, carregue uma imagem com menos de 2MB para garantir a persistência síncrona.');
+        return;
+      }
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64String = reader.result as string;
+        if (isEditMode && editingUser) {
+          setEditingUser({ ...editingUser, avatar: base64String });
+        } else {
+          setNewAvatar(base64String);
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
   // Handle Add User
   const handleAddUser = (e: React.FormEvent) => {
@@ -47,12 +71,13 @@ export default function UserManagementView({ users, setUsers }: UserManagementVi
       email: newEmail,
       role: newRole,
       status: newStatus,
-      avatar: `https://api.dicebear.com/7.x/adventurer/svg?seed=${encodeURIComponent(newName)}`
+      avatar: newAvatar || `https://api.dicebear.com/7.x/adventurer/svg?seed=${encodeURIComponent(newName)}`
     };
 
     setUsers((prev) => [newUser, ...prev]);
     setNewName('');
     setNewEmail('');
+    setNewAvatar('');
     setIsAdding(false);
   };
 
@@ -125,50 +150,97 @@ export default function UserManagementView({ users, setUsers }: UserManagementVi
             <Plus className="h-4 w-4 text-indigo-600" />
             <span>Inserir Credenciais do Novo Colaborador</span>
           </h3>
-          <form onSubmit={handleAddUser} className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div className="space-y-1">
-              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Nome Completo</label>
-              <input
-                type="text"
-                required
-                value={newName}
-                onChange={(e) => setNewName(e.target.value)}
-                placeholder="Ex. Thiago Silveira"
-                className="w-full text-xs font-medium px-3.5 py-2 rounded-xl border border-slate-200 bg-white focus:ring-2 focus:ring-indigo-500 focus:outline-none"
-              />
+          <form onSubmit={handleAddUser} className="flex flex-col md:flex-row gap-6">
+            {/* Left Column: Image Import / Upload Avatar preview */}
+            <div className="flex flex-col items-center justify-center space-y-2 border-2 border-dashed border-slate-200 rounded-2xl p-4 bg-white min-w-[170px] shrink-0 transition-all hover:border-indigo-400">
+              <div className="relative group">
+                <img
+                  src={newAvatar || `https://api.dicebear.com/7.x/adventurer/svg?seed=${encodeURIComponent(newName || 'default')}`}
+                  alt="Previa avatar"
+                  className="w-16 h-16 rounded-full object-cover border border-slate-200"
+                  referrerPolicy="no-referrer"
+                />
+                <label className="absolute bottom-0 right-0 p-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-full cursor-pointer shadow-md transition-colors" title="Carregar Imagem">
+                  <Upload className="h-3 w-3" />
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => handleAvatarFileChange(e, false)}
+                    className="hidden"
+                  />
+                </label>
+              </div>
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider text-center block">Foto do Perfil</span>
+              <p className="text-[9px] text-slate-400 text-center leading-tight">Escolha um arquivo ou use a URL</p>
+
+              <div className="w-full pt-2">
+                <input
+                  type="text"
+                  placeholder="URL da Imagem..."
+                  value={newAvatar}
+                  onChange={(e) => setNewAvatar(e.target.value)}
+                  className="w-full text-[9px] font-semibold px-2 py-1 rounded border border-slate-200 focus:outline-none focus:ring-1 focus:ring-indigo-500 bg-slate-50/50"
+                  title="Cole aqui o link direto da imagem se preferir"
+                />
+              </div>
+
+              {newAvatar && (
+                <button
+                  type="button"
+                  onClick={() => setNewAvatar('')}
+                  className="text-[9px] font-bold text-rose-500 hover:underline pt-1 block"
+                >
+                  Remover Imagem
+                </button>
+              )}
             </div>
 
-            <div className="space-y-1">
-              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Email Corporativo</label>
-              <input
-                type="email"
-                required
-                value={newEmail}
-                onChange={(e) => setNewEmail(e.target.value)}
-                placeholder="Ex. thiago.s@educorp.com"
-                className="w-full text-xs font-medium px-3.5 py-2 rounded-xl border border-slate-200 bg-white focus:ring-2 focus:ring-indigo-500 focus:outline-none"
-              />
-            </div>
+            {/* Right Column: Information form fields */}
+            <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wide block">Nome Completo</label>
+                <input
+                  type="text"
+                  required
+                  value={newName}
+                  onChange={(e) => setNewName(e.target.value)}
+                  placeholder="Ex. Thiago Silveira"
+                  className="w-full text-xs font-medium px-3.5 py-2 rounded-xl border border-slate-200 bg-white focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                />
+              </div>
 
-            <div className="space-y-1">
-              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Cargo/Função</label>
-              <select
-                value={newRole}
-                onChange={(e) => setNewRole(e.target.value as Role)}
-                className="w-full text-xs font-semibold px-3.5 py-2 rounded-xl border border-slate-200 bg-white focus:ring-2 focus:ring-indigo-500 focus:outline-none"
-              >
-                <option value="Usuário">Usuário (Colaborador)</option>
-                <option value="Admin">Administrador</option>
-              </select>
-            </div>
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wide block">Email Corporativo</label>
+                <input
+                  type="type"
+                  required
+                  value={newEmail}
+                  onChange={(e) => setNewEmail(e.target.value)}
+                  placeholder="Ex. thiago.s@educorp.com"
+                  className="w-full text-xs font-medium px-3.5 py-2 rounded-xl border border-slate-200 bg-white focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                />
+              </div>
 
-            <div className="space-y-1 flex items-end">
-              <button
-                type="submit"
-                className="w-full text-xs font-bold bg-indigo-600 text-white rounded-xl py-2.5 hover:bg-indigo-700 transition"
-              >
-                Salvar Cadastro
-              </button>
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wide block">Cargo/Função</label>
+                <select
+                  value={newRole}
+                  onChange={(e) => setNewRole(e.target.value as Role)}
+                  className="w-full text-xs font-semibold px-3.5 py-2 rounded-xl border border-slate-200 bg-white focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                >
+                  <option value="Usuário">Usuário (Colaborador)</option>
+                  <option value="Admin">Administrador</option>
+                </select>
+              </div>
+
+              <div className="md:col-span-3 space-y-1 flex items-end justify-end">
+                <button
+                  type="submit"
+                  className="px-6 text-xs font-bold bg-indigo-600 text-white rounded-xl py-2.5 hover:bg-indigo-700 transition shadow-md shadow-indigo-600/10"
+                >
+                  Salvar Cadastro de Colaborador
+                </button>
+              </div>
             </div>
           </form>
         </div>
@@ -344,6 +416,37 @@ export default function UserManagementView({ users, setUsers }: UserManagementVi
             </div>
             
             <form onSubmit={handleEditUserSubmit} className="p-6 space-y-4">
+              {/* Photo Upload/Import Row */}
+              <div className="flex items-center space-x-4 p-3 bg-slate-50 rounded-2xl border border-slate-100">
+                <div className="relative shrink-0">
+                  <img
+                    src={editingUser.avatar || `https://api.dicebear.com/7.x/adventurer/svg?seed=${encodeURIComponent(editingUser.name)}`}
+                    alt={editingUser.name}
+                    className="w-14 h-14 rounded-full object-cover border border-slate-200"
+                    referrerPolicy="no-referrer"
+                  />
+                  <label className="absolute bottom-0 right-0 p-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded-full cursor-pointer shadow-md transition-colors" title="Substituir Imagem">
+                    <Upload className="h-3 w-3" />
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => handleAvatarFileChange(e, true)}
+                      className="hidden"
+                    />
+                  </label>
+                </div>
+                <div className="flex-1 space-y-1">
+                  <label className="text-[9px] font-black uppercase text-slate-400 tracking-wider">Carregar foto ou link</label>
+                  <input
+                    type="text"
+                    placeholder="URL direta da imagem..."
+                    value={editingUser.avatar || ''}
+                    onChange={(e) => setEditingUser({ ...editingUser, avatar: e.target.value })}
+                    className="w-full text-[10px] px-2.5 py-1.5 border border-slate-200 rounded-lg bg-white focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                  />
+                </div>
+              </div>
+
               <div className="space-y-1">
                 <label className="text-[10px] font-black uppercase text-slate-400 tracking-wider">Nome Completo</label>
                 <input

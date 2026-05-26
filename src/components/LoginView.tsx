@@ -131,7 +131,7 @@ export default function LoginView({ onLogin, users }: LoginViewProps) {
           <Sparkles className="h-5 w-5 text-white" />
         </div>
         <div>
-          <h1 className="text-lg font-black tracking-tight text-white">EduCorporate</h1>
+          <h1 className="text-lg tracking-tight text-white"><span className="font-black text-indigo-400">E</span><span className="font-light text-slate-200">DXOn</span></h1>
           <p className="text-[10px] text-slate-400 font-extrabold uppercase tracking-widest">LMS High-Performance</p>
         </div>
       </header>

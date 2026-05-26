@@ -1,5 +1,5 @@
 {
-  "name": "EduCorporate LMS",
+  "name": "EDXOn",
   "description": "Sistema de gestão de aprendizagem corporativa de alta fusão integrado ao Gemini AI.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]

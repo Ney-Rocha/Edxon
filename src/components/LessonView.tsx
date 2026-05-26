@@ -435,7 +435,7 @@ export default function LessonView({ course, onBack, onUpdateProgress }: LessonV
                 Dúvida Técnica?
               </span>
               <p className="text-[11px] text-slate-300 leading-relaxed font-medium">
-                Precisa de uma revisão sumarizada dos conceitos desta lição no seu PDI? O EduCorporate Gemini responde em tempo real.
+                Precisa de uma revisão sumarizada dos conceitos desta lição no seu PDI? O EDXOn Gemini responde em tempo real.
               </p>
             </div>
 

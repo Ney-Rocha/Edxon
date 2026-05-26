@@ -69,6 +69,32 @@ export default function App() {
     initDbData();
   }, []);
 
+  // Sync Toast Feedback State
+  const [syncToast, setSyncToast] = useState<{ message: string; type: 'success' | 'error' | null }>({ message: '', type: null });
+
+  const showSyncToast = (message: string, type: 'success' | 'error') => {
+    setSyncToast({ message, type });
+    setTimeout(() => {
+      setSyncToast((prev) => prev.message === message ? { message: '', type: null } : prev);
+    }, 5000);
+  };
+
+  // Safe wrapper for fetches checking response.ok and parsing server response
+  const handleFetchSync = async (url: string, options?: RequestInit) => {
+    try {
+      const res = await fetch(url, options);
+      if (!res.ok) {
+        const errDetails = await res.json().catch(() => ({}));
+        throw new Error(errDetails.error || `Servidor respondeu com status ${res.status}`);
+      }
+      return await res.json().catch(() => ({}));
+    } catch (err: any) {
+      console.error(`[Supabase Proxy Error] ${url}:`, err);
+      showSyncToast(err.message || 'Falha ao sincronizar dados com o Supabase!', 'error');
+      throw err;
+    }
+  };
+
   // Sync state changes with Supabase backend endpoints
   const syncSetUsers = (action: React.SetStateAction<User[]>) => {
     setUsers((prevUsers) => {
@@ -77,26 +103,32 @@ export default function App() {
       if (nextValue.length > prevUsers.length) {
         const added = nextValue.find(nu => !prevUsers.some(ou => ou.id === nu.id));
         if (added) {
-          fetch("/api/db/users", {
+          handleFetchSync("/api/db/users", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(added)
-          }).catch(err => console.error("Error syncing added user:", err));
+          }).then(() => {
+            showSyncToast(`Colaborador ${added.name} cadastrado com sucesso!`, 'success');
+          }).catch(() => {});
         }
       } else if (nextValue.length < prevUsers.length) {
         const deleted = prevUsers.find(ou => !nextValue.some(nu => nu.id === ou.id));
         if (deleted) {
-          fetch(`/api/db/users/${deleted.id}`, { method: "DELETE" }).catch(err => console.error("Error syncing deleted user:", err));
+          handleFetchSync(`/api/db/users/${deleted.id}`, { method: "DELETE" }).then(() => {
+            showSyncToast(`Colaborador ${deleted.name} excluído com sucesso!`, 'success');
+          }).catch(() => {});
         }
       } else {
         nextValue.forEach(nu => {
           const ou = prevUsers.find(o => o.id === nu.id);
           if (ou && JSON.stringify(ou) !== JSON.stringify(nu)) {
-            fetch("/api/db/users", {
+            handleFetchSync("/api/db/users", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify(nu)
-            }).catch(err => console.error("Error syncing updated user:", err));
+            }).then(() => {
+              showSyncToast(`Dados/Status de ${nu.name} sincronizados!`, 'success');
+            }).catch(() => {});
           }
         });
       }
@@ -112,26 +144,32 @@ export default function App() {
       if (nextValue.length > prevTrainings.length) {
         const added = nextValue.find(nt => !prevTrainings.some(ot => ot.id === nt.id));
         if (added) {
-          fetch("/api/db/trainings", {
+          handleFetchSync("/api/db/trainings", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(added)
-          }).catch(err => console.error("Error syncing added training:", err));
+          }).then(() => {
+            showSyncToast(`Treinamento "${added.title}" adicionado ao Supabase!`, 'success');
+          }).catch(() => {});
         }
       } else if (nextValue.length < prevTrainings.length) {
         const deleted = prevTrainings.find(ot => !nextValue.some(nt => nt.id === ot.id));
         if (deleted) {
-          fetch(`/api/db/trainings/${deleted.id}`, { method: "DELETE" }).catch(err => console.error("Error syncing deleted training:", err));
+          handleFetchSync(`/api/db/trainings/${deleted.id}`, { method: "DELETE" }).then(() => {
+            showSyncToast(`Treinamento "${deleted.title}" excluído do Supabase!`, 'success');
+          }).catch(() => {});
         }
       } else {
         nextValue.forEach(nt => {
           const ot = prevTrainings.find(o => o.id === nt.id);
           if (ot && JSON.stringify(ot) !== JSON.stringify(nt)) {
-            fetch("/api/db/trainings", {
+            handleFetchSync("/api/db/trainings", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify(nt)
-            }).catch(err => console.error("Error syncing updated training:", err));
+            }).then(() => {
+              showSyncToast(`Treinamento "${nt.title}" editado e salvo!`, 'success');
+            }).catch(() => {});
           }
         });
       }
@@ -147,11 +185,13 @@ export default function App() {
       if (nextValue.length > prevActivities.length) {
         const added = nextValue.find(na => !prevActivities.some(oa => oa.id === na.id));
         if (added) {
-          fetch("/api/db/activities", {
+          handleFetchSync("/api/db/activities", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(added)
-          }).catch(err => console.error("Error syncing added activity:", err));
+          }).then(() => {
+            // Quiet, no successful toast needed for background activities tracker to avoid visual spam
+          }).catch(() => {});
         }
       }
 
@@ -166,11 +206,13 @@ export default function App() {
       if (nextValue.length > prevLogs.length) {
         const added = nextValue.find(nl => !prevLogs.some(ol => ol.id === nl.id));
         if (added) {
-          fetch("/api/db/logs", {
+          handleFetchSync("/api/db/logs", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(added)
-          }).catch(err => console.error("Error syncing added log:", err));
+          }).then(() => {
+            // Background log tracker status success
+          }).catch(() => {});
         }
       }
 
@@ -581,6 +623,40 @@ export default function App() {
           {renderActiveView()}
         </main>
       </div>
+
+      {/* Floating Status Toast Notifications for Supabase Integration status */}
+      {syncToast.message && (
+        <div 
+          className={`fixed bottom-5 right-5 z-[9999] max-w-md p-4 rounded-xl shadow-xl border flex items-start gap-3 animate-bounce shadow-slate-200/20 transition-all duration-300 ${
+            syncToast.type === 'error'
+              ? 'bg-rose-50 text-rose-950 border-rose-200 shadow-rose-200/10'
+              : 'bg-emerald-50 text-emerald-950 border-emerald-250 shadow-emerald-200/10'
+          }`}
+        >
+          <div className="mt-0.5">
+            {syncToast.type === 'error' ? (
+              <AlertTriangle className="h-5 w-5 text-rose-500 shrink-0" />
+            ) : (
+              <CheckCircle className="h-5 w-5 text-emerald-500 shrink-0" />
+            )}
+          </div>
+          <div className="flex-1 min-w-0">
+            <span className="text-xs font-bold block">
+              {syncToast.type === 'error' ? 'Falha na Sincronização' : 'Sincronizado com Supabase'}
+            </span>
+            <p className="text-[11px] mt-0.5 leading-relaxed text-slate-600 block break-words">
+              {syncToast.message}
+            </p>
+          </div>
+          <button 
+            type="button" 
+            onClick={() => setSyncToast({ message: '', type: null })}
+            className="text-slate-400 hover:text-slate-700 text-sm font-extrabold leading-none p-1 shrink-0"
+          >
+            ×
+          </button>
+        </div>
+      )}
     </div>
   );
 }

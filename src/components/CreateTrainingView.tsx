@@ -10,7 +10,8 @@ import {
   HelpCircle,
   RefreshCw,
   Award,
-  ArrowLeft
+  ArrowLeft,
+  Upload
 } from 'lucide-react';
 import { Training, TrainingType, TrainingStatus } from '../types';
 
@@ -24,7 +25,7 @@ interface CreateTrainingViewProps {
 
 const STOCK_IMAGES = [
   { id: 'img-1', title: 'Liderança', url: 'https://lh3.googleusercontent.com/aida-public/AB6AXuC9L0E9rg0igYRRN-UpSFxzPWwi9drftSQsiepXS9aMGPIgwtW2U8d74NY6pr5K2iY_iDjGe3XWE7-YR9CRgBGKlWdDtmPkMKOLFr6fogauhyEpmDFh3GwA_zBtsICrcShfp8_GyrSK3OtN_T5OLQ2hjmAG4OgaDBzT3cl_4re6hbyjZ0zMDwbqJ2ijxlJECdSDj_wXhgf3nI1LquCQKAGQUoVK8_xJIxYhmVsoNg-8Bg3WAJy70RuPJiCKsdh9fvQiS6lU_1GBVhY' },
-  { id: 'img-2', title: 'Compliance', url: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBx5Ekdd4AMlwRjVWuLykPJ2-qE648HwOg7QqmiwV19PWLs5c04dGNXD2ufz67qgfKjYiycdteLXKrYjmS9NMGu7l0sXjmVMqjTqu1DvEsE5kDeb7JAkeh1wHQBkU-XmAjFhLukk2Bb3_gZJ08FvXJXG2Lplqby04lGiNRdgGEh1pYEeViXgoCB36WHxCN3eo_bwBaDabTSsgPxLg9wx1eYtgEYYsxCApNRHylrFmDMp9U30vJpLD89-_r0KTP_m0xzDO3OIy7DOM' },
+  { id: 'img-2', title: 'Compliance', url: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBx5Ekdd4AMlwRjVWuLykPJ2-qE648HwOg7QqmiwV19PWLs5c04dGNXD2ufz67qgfKjYiycdteLXKrYjmS9NMGu7l0sXjmVMqjTqu1DvEsE5kDeb7JAkeh1wHQBkU-XmAqjFhLukk2Bb3_gZJ08FvXJXG2Lplqby04lGiNRdgGEh1pYEeViXgoCB36WHxCN3eo_bwBaDabTSsgPxLg9wx1eYtgEYYsxCApNRHylrFmDMp9U30vJpLD89-_r0KTP_m0xzDO3OIy7DOM' },
   { id: 'img-3', title: 'Comunicação', url: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBOozTNrSEG49JAwIzT3PZBh0RqbgMKLyKv13zkB_zwBSksdjuuQ4UA2rRvnimQEZd3UpD7mf3CzVIYZTZYuM0ar8Sfpqkrs0lJJlLzLQAQVNqa_pkJOWHZi5BYiit1jS917twtFGLRxN1M4irXco4_I8Rl-wXxO_VQHKIDjDqe6aVmRryxOEt3dISkGeQLj_OH6IMmeip7Al6UWTh42wfk36Ox4Fa80yPlGr0n-3sDJDZ5rbznaQ5tc6G2tbLZF7DCXlyAbXvY4Sc' },
   { id: 'img-4', title: 'Produtividade', url: 'https://lh3.googleusercontent.com/aida-public/AB6AXuAppBwmNmshrStD2CN8jz9_5cLJgm6LPb6FU_JhUUfCfqCv5CL4whrudfF-zUF37utf5a04zlOXItgsd4Q3dQWBG0umKLttf09HbG96ciPEsorDRBkp1bjkJ5TNwVqTNws5kEakNXAkKCPSbv1padkrrghHYql8hFt50D_RDMBXsvCNSUiUdyEU43cq9EZxnECUNHhZoGGzwE4Y0K4zFRUTCGZFx5wfdeZ8VswOYc26RFqvyIwfVas4rvJjXNdnBeHlgwmgliHHSMY' }
 ];
@@ -48,6 +49,23 @@ export default function CreateTrainingView({
       ? editingTraining.coverImage
       : ''
   );
+
+  // Handle Cover File Upload via client-side FileReader as Base64 Data URL
+  const handleCoverFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 2 * 1024 * 1024) {
+        alert('Por favor, carregue uma imagem com menos de 2MB para garantir a persistência síncrona.');
+        return;
+      }
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64String = reader.result as string;
+        setCustomCoverUrl(base64String);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
   // AI Generation outlines
   const [aiLoading, setAiLoading] = useState(false);
@@ -239,39 +257,72 @@ export default function CreateTrainingView({
             <div className="space-y-3">
               <label className="text-[10px] font-black uppercase text-slate-400 tracking-wider block">Imagem de Capa do Treinamento</label>
               
-              {/* Grid of default Stock selections matches mockup covers */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                {STOCK_IMAGES.map((img) => {
-                  const isChosen = selectedCover === img.url && !customCoverUrl;
-                  return (
-                    <button
-                      type="button"
-                      key={img.id}
-                      onClick={() => {
-                        setSelectedCover(img.url);
-                        setCustomCoverUrl('');
-                      }}
-                      className={`relative h-20 rounded-xl overflow-hidden border-2 transition ${
-                        isChosen ? 'border-indigo-600' : 'border-transparent'
-                      }`}
-                    >
-                      <img src={img.url} alt={img.title} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-                      <div className="absolute inset-0 bg-black/30 flex items-end p-1.5 justify-center">
-                        <span className="text-[9px] font-extrabold text-white uppercase">{img.title}</span>
-                      </div>
-                    </button>
-                  );
-                })}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Left Side: Drag & Drop upload or file selection */}
+                <div className="border-2 border-dashed border-slate-200 rounded-2xl p-4 bg-slate-50/50 hover:border-indigo-400 transition-all flex flex-col items-center justify-center text-center space-y-2 relative min-h-[120px]">
+                  {customCoverUrl ? (
+                    <div className="relative w-full h-24 rounded-lg overflow-hidden border border-slate-200">
+                      <img src={customCoverUrl} alt="Previa capa" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                      <button
+                        type="button"
+                        onClick={() => setCustomCoverUrl('')}
+                        className="absolute top-1 right-1 px-2 py-1 bg-rose-600 hover:bg-rose-700 text-white font-extrabold text-[9px] uppercase rounded"
+                      >
+                        Remover
+                      </button>
+                    </div>
+                  ) : (
+                    <label className="w-full h-full cursor-pointer flex flex-col items-center justify-center py-4">
+                      <Upload className="h-6 w-6 text-indigo-500 animate-pulse mb-1.5" />
+                      <span className="text-xs font-bold text-slate-700 block">Arraste ou Importe uma Imagem</span>
+                      <span className="text-[9px] text-slate-400 font-medium tracking-wide">Suporta JPG, PNG, GIF (Máx. 2MB)</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleCoverFileChange}
+                        className="hidden"
+                      />
+                    </label>
+                  )}
+                </div>
+
+                {/* Right Side: Quick templates / stock images */}
+                <div className="space-y-1.5">
+                  <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Ou escolha um modelo padrão:</span>
+                  <div className="grid grid-cols-2 gap-2">
+                    {STOCK_IMAGES.map((img) => {
+                      const isChosen = selectedCover === img.url && !customCoverUrl;
+                      return (
+                        <button
+                          type="button"
+                          key={img.id}
+                          onClick={() => {
+                            setSelectedCover(img.url);
+                            setCustomCoverUrl('');
+                          }}
+                          className={`relative h-[54px] rounded-xl overflow-hidden border-2 transition ${
+                            isChosen ? 'border-indigo-600' : 'border-transparent'
+                          }`}
+                        >
+                          <img src={img.url} alt={img.title} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                          <div className="absolute inset-0 bg-black/35 flex items-center justify-center">
+                            <span className="text-[9px] font-black text-white uppercase tracking-wider">{img.title}</span>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
               </div>
 
-              <div className="flex items-center gap-2 pt-1">
-                <span className="text-xs text-slate-400 whitespace-nowrap">Ou cole um Link Direto (URL):</span>
+              <div className="flex items-center gap-2 pt-1 border-t border-slate-100/50 mt-1">
+                <span className="text-[10px] text-slate-450 font-bold whitespace-nowrap uppercase tracking-wider">Link direto da Capa (URL):</span>
                 <input
                   type="text"
-                  placeholder="Ex. https://imagens.com/minha-capa.jpg"
+                  placeholder="Cole um link alternativo (ex. https://imagens.com/...)"
                   value={customCoverUrl}
                   onChange={(e) => setCustomCoverUrl(e.target.value)}
-                  className="flex-1 text-xs px-3 py-1.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-indigo-500 bg-slate-50/50"
+                  className="flex-1 text-xs px-3 py-1.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-indigo-500 bg-slate-50/55"
                 />
               </div>
             </div>

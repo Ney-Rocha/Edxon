@@ -1,4 +1,4 @@
-# EduCorporate - Instruções do Sistema e Contexto do Projeto
+# EDXOn - Instruções do Sistema e Contexto do Projeto
 
 Este arquivo registra o contexto do sistema, suas decisões de design, regras de negócios e as últimas modificações realizadas. Ele é lido automaticamente pelas próximas sessões do agente de IA para manter a fidelidade e consistência técnica do projeto.
 

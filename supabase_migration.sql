@@ -189,3 +189,55 @@ on conflict (id) do update set
   action = excluded.action,
   status = excluded.status,
   time = excluded.time;
+
+-- --------------------------------------------------
+-- 10. ROW LEVEL SECURITY (RLS) POLICIES & ACCESSIBILITY
+-- --------------------------------------------------
+-- If RLS is enabled on Supabase, queries with the standard anonymous key (SUPABASE_ANON_KEY)
+-- require explicit policies or disabling RLS altogether. Run the following to allow full sync:
+
+-- Option A: Purely Permissive Policies (Keeps RLS enabled but authorizes all public operations)
+alter table users enable row level security;
+alter table trainings enable row level security;
+alter table activities enable row level security;
+alter table system_logs enable row level security;
+
+drop policy if exists "Enable read access for all users" on users;
+drop policy if exists "Enable insert access for all users" on users;
+drop policy if exists "Enable update access for all users" on users;
+drop policy if exists "Enable delete access for all users" on users;
+
+create policy "Enable read access for all users" on users for select using (true);
+create policy "Enable insert access for all users" on users for insert with check (true);
+create policy "Enable update access for all users" on users for update using (true) with check (true);
+create policy "Enable delete access for all users" on users for delete using (true);
+
+drop policy if exists "Enable read access for all users" on trainings;
+drop policy if exists "Enable insert access for all users" on trainings;
+drop policy if exists "Enable update access for all users" on trainings;
+drop policy if exists "Enable delete access for all users" on trainings;
+
+create policy "Enable read access for all users" on trainings for select using (true);
+create policy "Enable insert access for all users" on trainings for insert with check (true);
+create policy "Enable update access for all users" on trainings for update using (true) with check (true);
+create policy "Enable delete access for all users" on trainings for delete using (true);
+
+drop policy if exists "Enable read access for all users" on activities;
+drop policy if exists "Enable insert access for all users" on activities;
+
+create policy "Enable read access for all users" on activities for select using (true);
+create policy "Enable insert access for all users" on activities for insert with check (true);
+
+drop policy if exists "Enable read access for all users" on system_logs;
+drop policy if exists "Enable insert access for all users" on system_logs;
+
+create policy "Enable read access for all users" on system_logs for select using (true);
+create policy "Enable insert access for all users" on system_logs for insert with check (true);
+
+
+-- Option B: Disable RLS completely (Alternative approach - uncomment to use)
+-- alter table users disable row level security;
+-- alter table trainings disable row level security;
+-- alter table activities disable row level security;
+-- alter table system_logs disable row level security;
+

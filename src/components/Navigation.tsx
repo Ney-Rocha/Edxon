@@ -87,7 +87,7 @@ export default function Navigation({
                 <Sparkles className="h-5 w-5 text-white" />
               </div>
               <div>
-                <h1 className="text-xl font-bold tracking-tight text-white">EduCorporate</h1>
+                <h1 className="text-xl tracking-tight text-white"><span className="font-black text-indigo-400">E</span><span className="font-light text-slate-200">DXOn</span></h1>
                 <p className="text-xs text-slate-400">LMS de Alta Definição</p>
               </div>
             </div>
