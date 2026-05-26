@@ -25,6 +25,8 @@ interface LessonViewProps {
     progress: number;
     coverImage: string;
     type: string;
+    videoUrl?: string;
+    pdfUrl?: string; // Complementary material reference
   };
   onBack: () => void;
   onUpdateProgress: (courseId: string, addedProgress: number) => void;
@@ -36,6 +38,16 @@ const LESSON_PLAYLIST = [
   { id: 'l3', title: '03. Gestão e Resolução Inteligente de Objeções', duration: '15 min', status: 'pending' },
   { id: 'l4', title: '04. Framework de Performance e Métricas de Sucesso', duration: '22 min', status: 'pending' }
 ];
+
+const getYouTubeEmbedUrl = (url?: string): string | null => {
+  if (!url) return null;
+  const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=|shorts\/)([^#\&\?]*).*/;
+  const match = url.match(regExp);
+  if (match && match[2].length === 11) {
+    return `https://www.youtube.com/embed/${match[2]}?autoplay=1`;
+  }
+  return null;
+};
 
 export default function LessonView({ course, onBack, onUpdateProgress }: LessonViewProps) {
   const [isPlaying, setIsPlaying] = useState(false);
@@ -111,7 +123,27 @@ export default function LessonView({ course, onBack, onUpdateProgress }: LessonV
 
             {/* Simulated interactive active player monitor content */}
             {isPlaying ? (
-              <div className="absolute inset-0 flex flex-col justify-between p-6 bg-gradient-to-t from-slate-950 via-transparent to-slate-900/60 text-slate-100 z-10">
+              getYouTubeEmbedUrl(course.videoUrl) ? (
+                <div className="absolute inset-0 z-20 bg-slate-950">
+                  <iframe
+                    src={getYouTubeEmbedUrl(course.videoUrl) || ''}
+                    title={course.title}
+                    frameBorder="0"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                    allowFullScreen
+                    className="w-full h-full"
+                  ></iframe>
+                  <div className="absolute top-4 right-4 z-30">
+                    <button
+                      onClick={() => setIsPlaying(false)}
+                      className="bg-slate-900/85 hover:bg-slate-900 text-white border border-white/10 px-2.5 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider backdrop-blur-sm transition-all"
+                    >
+                      Pausar Aula
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="absolute inset-0 flex flex-col justify-between p-6 bg-gradient-to-t from-slate-950 via-transparent to-slate-900/60 text-slate-100 z-10">
                 <div className="flex items-start justify-between">
                   <div>
                     <span className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest bg-slate-900/60 px-2 py-0.5 rounded border border-white/5 backdrop-blur">
@@ -192,7 +224,8 @@ export default function LessonView({ course, onBack, onUpdateProgress }: LessonV
                   </div>
                 </div>
               </div>
-            ) : (
+            )
+          ) : (
               <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-950/80 p-6 text-center z-10">
                 <button
                   onClick={handleTogglePlay}
@@ -283,25 +316,47 @@ export default function LessonView({ course, onBack, onUpdateProgress }: LessonV
 
               {activeTab === 'apoio' && (
                 <div className="space-y-3">
-                  <div className="p-3 border border-slate-100 hover:bg-slate-50 rounded-xl transition flex items-center justify-between">
+                  {course.pdfUrl ? (
+                    <div className="p-3 border border-slate-200 bg-indigo-50/10 hover:bg-slate-50 rounded-xl transition flex items-center justify-between">
+                      <div className="flex items-center space-x-3">
+                        <span className="p-2 bg-rose-50 text-rose-600 rounded-lg">
+                          <FileText className="h-4 w-4" />
+                        </span>
+                        <div>
+                          <p className="text-xs font-bold text-slate-850">Apostila e Material do Treinamento.pdf</p>
+                          <p className="text-[10px] text-indigo-600 font-extrabold uppercase tracking-wide">Material Anexado pelo Instrutor</p>
+                        </div>
+                      </div>
+                      <a
+                        href={course.pdfUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs font-black text-indigo-600 hover:underline px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg shadow-sm"
+                      >
+                        Abrir PDF
+                      </a>
+                    </div>
+                  ) : null}
+
+                  <div className="p-3 border border-slate-150 hover:bg-slate-50 rounded-xl transition flex items-center justify-between">
                     <div className="flex items-center space-x-3">
                       <span className="p-2 bg-rose-50 rounded-lg text-rose-600">
                         <FileText className="h-4 w-4" />
                       </span>
                       <div>
-                        <p className="text-xs font-bold text-slate-850">Apostila Completa do Aluno.pdf</p>
-                        <p className="text-[10px] text-slate-400">PDF • 12 MB • Guia Teórico</p>
+                        <p className="text-xs font-bold text-slate-850">Guia Geral de Integração do Aluno.pdf</p>
+                        <p className="text-[10px] text-slate-400">PDF • 12 MB • Guia de Boas-vindas</p>
                       </div>
                     </div>
                     <button
                       onClick={() => alert('Download do material de apoio iniciado com sucesso!')}
-                      className="text-xs font-bold text-indigo-600 hover:underline"
+                      className="text-xs font-bold text-indigo-600 hover:underline px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg shadow-sm"
                     >
                       Exportar
                     </button>
                   </div>
 
-                  <div className="p-3 border border-slate-100 hover:bg-slate-50 rounded-xl transition flex items-center justify-between">
+                  <div className="p-3 border border-slate-150 hover:bg-slate-50 rounded-xl transition flex items-center justify-between">
                     <div className="flex items-center space-x-3">
                       <span className="p-2 bg-amber-50 rounded-lg text-amber-600">
                         <BookOpen className="h-4 w-4" />
@@ -312,8 +367,8 @@ export default function LessonView({ course, onBack, onUpdateProgress }: LessonV
                       </div>
                     </div>
                     <button
-                      onClick={() => alert('Parceria certificada! Link aberto em aba segura simulada do navegador.')}
-                      className="text-xs font-bold text-indigo-600 hover:underline"
+                      onClick={() => alert('Parceria certificada! Link aberto em aba segura do navegador.')}
+                      className="text-xs font-bold text-indigo-600 hover:underline px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg shadow-sm"
                     >
                       Visitar
                     </button>

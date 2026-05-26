@@ -12,7 +12,13 @@ import {
   addActivity,
   getLogs,
   addLog,
-  isSupabaseConfigured
+  isSupabaseConfigured,
+  resetDatabase,
+  getCourseTypes,
+  upsertCourseType,
+  getQuestions,
+  saveCourseQuestions,
+  getSupabaseClient
 } from "./server/supabase";
 
 async function startServer() {
@@ -24,6 +30,15 @@ async function startServer() {
   // === Supabase proxy API endpoints ===
   app.get("/api/db/status", (req, res) => {
     res.json({ configured: isSupabaseConfigured() });
+  });
+
+  app.post("/api/db/reset", async (req, res) => {
+    try {
+      const result = await resetDatabase();
+      res.json(result);
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
   });
 
   app.get("/api/db/users", async (req, res) => {
@@ -77,6 +92,91 @@ async function startServer() {
       res.json({ success });
     } catch (e: any) {
       res.status(500).json({ error: e.message });
+    }
+  });
+
+  // === Course Types & Evaluations ===
+  app.get("/api/db/course-types", async (req, res) => {
+    try {
+      const data = await getCourseTypes();
+      res.json(data);
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.post("/api/db/course-types", async (req, res) => {
+    try {
+      const data = await upsertCourseType(req.body);
+      res.json(data);
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.get("/api/db/questions", async (req, res) => {
+    try {
+      const courseId = req.query.courseId as string;
+      const data = await getQuestions(courseId);
+      res.json(data);
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.post("/api/db/questions/:courseId", async (req, res) => {
+    try {
+      const { courseId } = req.params;
+      const questionsList = req.body;
+      const success = await saveCourseQuestions(courseId, questionsList);
+      res.json({ success });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.post("/api/db/upload", async (req, res) => {
+    const { fileBase64, fileName, fileType } = req.body;
+    try {
+      if (!fileBase64 || !fileName) {
+        return res.status(400).json({ error: "Faltando base64 do arquivo ou nome do arquivo." });
+      }
+
+      const client = getSupabaseClient();
+      if (!client) {
+        const dataUri = `data:${fileType || "application/pdf"};base64,${fileBase64}`;
+        return res.json({ url: dataUri });
+      }
+
+      const buffer = Buffer.from(fileBase64, "base64");
+      const uniqueName = `${Date.now()}_${fileName}`;
+
+      try {
+        await client.storage.createBucket("training-materials", { public: true });
+      } catch (bucketErr) {
+        // Bucket details or permissions
+      }
+
+      const { data, error } = await client.storage
+        .from("training-materials")
+        .upload(uniqueName, buffer, {
+          contentType: fileType || "application/pdf",
+          upsert: true
+        });
+
+      if (error) {
+        console.error("[Supabase Storage] upload fallback to dataUri:", error.message);
+        throw error;
+      }
+
+      const { data: { publicUrl } } = client.storage
+        .from("training-materials")
+        .getPublicUrl(uniqueName);
+
+      return res.json({ url: publicUrl });
+    } catch (e: any) {
+      const dataUri = `data:${fileType || "application/pdf"};base64,${fileBase64}`;
+      res.json({ url: dataUri });
     }
   });
 

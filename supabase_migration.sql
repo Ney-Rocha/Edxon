@@ -18,7 +18,7 @@ create table if not exists users (
     id text primary key,
     name text not null,
     email text unique not null,
-    role text not null check (role in ('Admin', 'Administrador', 'Usuário')),
+    role text not null default 'usuario' check (role in ('admin', 'usuario')),
     status text not null check (status in ('Ativo', 'Pendente', 'Inativo', 'Suspenso')),
     avatar text,
     created_at timestamp with time zone default timezone('utc'::text, now())
@@ -88,9 +88,9 @@ create index if not exists idx_system_logs_created_at on system_logs(created_at 
 -- --------------------------------------------------
 insert into users (id, name, email, role, status, avatar)
 values 
-  ('usr-00', 'Rocha Santos', 'rocha.santos@dxon.com.br', 'Administrador', 'Ativo', 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150'),
-  ('usr-01', 'Bruno Santos', 'bruno.santos@educorp.com', 'Usuário', 'Ativo', 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150'),
-  ('usr-02', 'Carla Dias', 'carla.dias@educorp.com', 'Usuário', 'Ativo', 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150')
+  ('usr-00', 'Rocha Santos', 'rocha.santos@dxon.com.br', 'admin', 'Ativo', 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150'),
+  ('usr-01', 'Bruno Santos', 'bruno.santos@educorp.com', 'usuario', 'Ativo', 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150'),
+  ('usr-02', 'Carla Dias', 'carla.dias@educorp.com', 'usuario', 'Ativo', 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150')
 on conflict (id) do update set
   name = excluded.name,
   email = excluded.email,
@@ -193,51 +193,61 @@ on conflict (id) do update set
 -- --------------------------------------------------
 -- 10. ROW LEVEL SECURITY (RLS) POLICIES & ACCESSIBILITY
 -- --------------------------------------------------
--- If RLS is enabled on Supabase, queries with the standard anonymous key (SUPABASE_ANON_KEY)
--- require explicit policies or disabling RLS altogether. Run the following to allow full sync:
-
--- Option A: Purely Permissive Policies (Keeps RLS enabled but authorizes all public operations)
+-- Enable Row Level Security (RLS) on all core tables
 alter table users enable row level security;
 alter table trainings enable row level security;
 alter table activities enable row level security;
 alter table system_logs enable row level security;
 
+-- USERS Table Policies
 drop policy if exists "Enable read access for all users" on users;
 drop policy if exists "Enable insert access for all users" on users;
 drop policy if exists "Enable update access for all users" on users;
 drop policy if exists "Enable delete access for all users" on users;
 
-create policy "Enable read access for all users" on users for select using (true);
-create policy "Enable insert access for all users" on users for insert with check (true);
-create policy "Enable update access for all users" on users for update using (true) with check (true);
-create policy "Enable delete access for all users" on users for delete using (true);
+create policy "Allow read access for anyone" on users
+  for select using (true);
 
+create policy "Allow insert access for anyone" on users
+  for insert with check (true);
+
+create policy "Allow update access only for admins" on users
+  for update using (exists (select 1 from users where role = 'admin'))
+  with check (exists (select 1 from users where role = 'admin'));
+
+create policy "Allow delete access only for admins" on users
+  for delete using (exists (select 1 from users where role = 'admin'));
+
+-- TRAININGS Table Policies
 drop policy if exists "Enable read access for all users" on trainings;
 drop policy if exists "Enable insert access for all users" on trainings;
 drop policy if exists "Enable update access for all users" on trainings;
 drop policy if exists "Enable delete access for all users" on trainings;
 
-create policy "Enable read access for all users" on trainings for select using (true);
-create policy "Enable insert access for all users" on trainings for insert with check (true);
-create policy "Enable update access for all users" on trainings for update using (true) with check (true);
-create policy "Enable delete access for all users" on trainings for delete using (true);
+create policy "Allow read of trainings for everyone" on trainings
+  for select using (true);
 
+create policy "Allow write of trainings for admins only" on trainings
+  for all using (exists (select 1 from users where role = 'admin'))
+  with check (exists (select 1 from users where role = 'admin'));
+
+-- ACTIVITIES Table Policies
 drop policy if exists "Enable read access for all users" on activities;
 drop policy if exists "Enable insert access for all users" on activities;
 
-create policy "Enable read access for all users" on activities for select using (true);
-create policy "Enable insert access for all users" on activities for insert with check (true);
+create policy "Allow read of activities for everyone" on activities
+  for select using (true);
 
+create policy "Allow creation of activities for registered accounts" on activities
+  for insert with check (true);
+
+-- SYSTEM_LOGS Table Policies
 drop policy if exists "Enable read access for all users" on system_logs;
 drop policy if exists "Enable insert access for all users" on system_logs;
 
-create policy "Enable read access for all users" on system_logs for select using (true);
-create policy "Enable insert access for all users" on system_logs for insert with check (true);
+create policy "Allow read of audit logs only for admins" on system_logs
+  for select using (exists (select 1 from users where role = 'admin'));
 
-
--- Option B: Disable RLS completely (Alternative approach - uncomment to use)
--- alter table users disable row level security;
--- alter table trainings disable row level security;
--- alter table activities disable row level security;
--- alter table system_logs disable row level security;
+create policy "Allow background registration of system logs" on system_logs
+  for insert with check (true);
 

@@ -5,8 +5,7 @@ import {
   BookOpen,
   PlusCircle,
   FileBarChart,
-  User as UserIcon,
-  ArrowLeftRight,
+  Settings,
   Sparkles,
   X,
   LogOut
@@ -17,8 +16,6 @@ import { UI_IMAGES } from '../data';
 interface NavigationProps {
   currentView: ViewType;
   setView: (view: ViewType) => void;
-  currentRole: Role;
-  setRole: (role: Role) => void;
   isMobileOpen?: boolean;
   onClose?: () => void;
   onLogout?: () => void;
@@ -28,35 +25,26 @@ interface NavigationProps {
 export default function Navigation({
   currentView,
   setView,
-  currentRole,
-  setRole,
   isMobileOpen = false,
   onClose,
   onLogout,
   currentUser
 }: NavigationProps) {
+  const role = currentUser?.role || 'usuario';
+
   const adminMenuItems = [
     { id: 'admin-dashboard' as ViewType, label: 'Visão Geral', icon: LayoutDashboard },
+    { id: 'student-dashboard' as ViewType, label: 'Meus Cursos', icon: BookOpen },
     { id: 'admin-users' as ViewType, label: 'Usuários', icon: Users },
     { id: 'admin-trainings' as ViewType, label: 'Treinamentos', icon: BookOpen },
     { id: 'admin-new-training' as ViewType, label: 'Criar Curso', icon: PlusCircle },
-    { id: 'admin-reports' as ViewType, label: 'Relatórios & Logs', icon: FileBarChart }
+    { id: 'admin-reports' as ViewType, label: 'Relatórios & Logs', icon: FileBarChart },
+    { id: 'parameters' as ViewType, label: 'Parâmetros', icon: Settings }
   ];
 
   const studentMenuItems = [
     { id: 'student-dashboard' as ViewType, label: 'Meus Cursos', icon: BookOpen }
   ];
-
-  const handleRoleToggle = () => {
-    if (onClose) onClose();
-    if (currentRole === 'Admin') {
-      setRole('Usuário');
-      setView('student-dashboard');
-    } else {
-      setRole('Admin');
-      setView('admin-dashboard');
-    }
-  };
 
   const handleNavigationChange = (target: ViewType) => {
     setView(target);
@@ -87,7 +75,7 @@ export default function Navigation({
                 <Sparkles className="h-5 w-5 text-white" />
               </div>
               <div>
-                <h1 className="text-xl tracking-tight text-white"><span className="font-black text-indigo-400">E</span><span className="font-light text-slate-200">DXOn</span></h1>
+                <h1 className="text-xl tracking-tight text-white"><span className="font-black text-[#00ED2D]">E</span><span className="font-light text-white">dxon</span></h1>
                 <p className="text-xs text-slate-400">LMS de Alta Definição</p>
               </div>
             </div>
@@ -108,15 +96,17 @@ export default function Navigation({
             <div>
               <div className="flex items-center justify-between px-3 mb-2 text-xs font-semibold uppercase tracking-wider text-slate-500">
                 <span>Menu Principal</span>
-                <span className="px-1.5 py-0.5 text-[10px] rounded-full bg-slate-800 text-slate-300">
-                  {currentRole}
+                <span className="px-1.5 py-0.5 text-[10px] rounded-full bg-slate-800 text-slate-300 uppercase tracking-widest font-extrabold">
+                  {role === 'admin' ? 'Admin' : 'Usuário'}
                 </span>
               </div>
               <nav className="space-y-1">
-                {currentRole === 'Admin'
+                {role === 'admin'
                   ? adminMenuItems.map((item) => {
                       const Icon = item.icon;
-                      const isActive = currentView === item.id;
+                      const isActive = item.id === 'student-dashboard'
+                        ? ['student-dashboard', 'student-lesson', 'student-quiz'].includes(currentView)
+                        : currentView === item.id;
                       return (
                         <button
                           key={item.id}
@@ -134,7 +124,9 @@ export default function Navigation({
                     })
                   : studentMenuItems.map((item) => {
                       const Icon = item.icon;
-                      const isActive = currentView === item.id || currentView === 'student-quiz';
+                      const isActive = item.id === 'student-dashboard'
+                        ? ['student-dashboard', 'student-lesson', 'student-quiz'].includes(currentView)
+                        : currentView === item.id;
                       return (
                         <button
                           key={item.id}
@@ -155,31 +147,21 @@ export default function Navigation({
           </div>
         </div>
 
-        {/* Role Switcher & Profile footer */}
+        {/* Profile footer with connected context */}
         <div className="p-4 border-t border-slate-800 bg-slate-950/40 space-y-4">
-          {/* Quick Role Toggle Trigger */}
-          <button
-            onClick={handleRoleToggle}
-            className="w-full py-2 px-3 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs text-indigo-300 hover:text-white font-medium flex items-center justify-center space-x-2 transition-all border border-slate-700/50"
-          >
-            <ArrowLeftRight className="h-3 w-3" />
-            <span>Mudar para {currentRole === 'Admin' ? 'Visão Aluno' : 'Visão Admin'}</span>
-          </button>
-
-          {/* Custom Profile Box aligned to active role */}
           <div className="flex items-center space-x-3 px-2">
             <img
-              src={currentUser ? currentUser.avatar : (currentRole === 'Admin' ? UI_IMAGES.alexRivera : UI_IMAGES.ricardoSilva)}
+              src={currentUser?.avatar || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(currentUser?.name || 'User')}`}
               alt="Profile Avatar"
               className="h-10 w-10 rounded-full border-2 border-indigo-500/20 object-cover"
               referrerPolicy="no-referrer"
             />
             <div className="min-w-0 flex-1">
               <p className="text-sm font-semibold text-white truncate">
-                {currentUser ? currentUser.name : (currentRole === 'Admin' ? 'Alex Rivera' : 'Ricardo Silva')}
+                {currentUser?.name || 'Colaborador'}
               </p>
               <p className="text-xs text-slate-400 truncate">
-                {currentUser ? (currentUser.role === 'Admin' ? 'Administrador' : 'Aluno/Colaborador') : (currentRole === 'Admin' ? 'Gerente Geral' : 'Gestor de Vendas')}
+                {role === 'admin' ? 'Administrador' : 'Colaborador'}
               </p>
             </div>
           </div>

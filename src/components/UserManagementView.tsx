@@ -29,7 +29,7 @@ export default function UserManagementView({ users, setUsers }: UserManagementVi
   const [isAdding, setIsAdding] = useState(false);
   const [newName, setNewName] = useState('');
   const [newEmail, setNewEmail] = useState('');
-  const [newRole, setNewRole] = useState<Role>('Usuário');
+  const [newRole, setNewRole] = useState<Role>('usuario');
   const [newStatus, setNewStatus] = useState<UserStatus>('Ativo');
   const [newAvatar, setNewAvatar] = useState<string>('');
 
@@ -228,8 +228,8 @@ export default function UserManagementView({ users, setUsers }: UserManagementVi
                   onChange={(e) => setNewRole(e.target.value as Role)}
                   className="w-full text-xs font-semibold px-3.5 py-2 rounded-xl border border-slate-200 bg-white focus:ring-2 focus:ring-indigo-500 focus:outline-none"
                 >
-                  <option value="Usuário">Usuário (Colaborador)</option>
-                  <option value="Admin">Administrador</option>
+                  <option value="usuario">Usuário (Colaborador)</option>
+                  <option value="admin">Administrador</option>
                 </select>
               </div>
 
@@ -268,11 +268,11 @@ export default function UserManagementView({ users, setUsers }: UserManagementVi
             <select
               value={roleFilter}
               onChange={(e) => setRoleFilter(e.target.value as any)}
-              className="text-xs font-bold border border-slate-200 rounded-xl px-2.5 py-1.5 focus:outline-none bg-slate-50/50"
+              className="text-xs font-bold border border-slate-200 rounded-xl px-2.5 py-1.5 focus:outline-none bg-slate-50/50 cursor-pointer"
             >
               <option value="Todos">Todos</option>
-              <option value="Admin">Admin</option>
-              <option value="Usuário">Usuário</option>
+              <option value="admin">Admin</option>
+              <option value="usuario">Usuário</option>
             </select>
           </div>
 
@@ -333,12 +333,12 @@ export default function UserManagementView({ users, setUsers }: UserManagementVi
                     <td className="py-4 px-6 whitespace-nowrap">
                       <span
                         className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                          u.role === 'Admin'
+                          u.role === 'admin'
                             ? 'bg-blue-50 text-blue-700 border border-blue-100/50'
                             : 'bg-slate-100 text-slate-600'
                         }`}
                       >
-                        {u.role}
+                        {u.role === 'admin' ? 'Administrador' : 'Usuário'}
                       </span>
                     </td>
                     <td className="py-4 px-6 whitespace-nowrap">
@@ -477,8 +477,8 @@ export default function UserManagementView({ users, setUsers }: UserManagementVi
                     onChange={(e) => setEditingUser({ ...editingUser, role: e.target.value as Role })}
                     className="w-full text-xs font-semibold px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white focus:ring-2 focus:ring-indigo-500 focus:outline-none cursor-pointer"
                   >
-                    <option value="Usuário">Usuário (Colaborador)</option>
-                    <option value="Admin">Administrador</option>
+                    <option value="usuario">Usuário (Colaborador)</option>
+                    <option value="admin">Administrador</option>
                   </select>
                 </div>
 

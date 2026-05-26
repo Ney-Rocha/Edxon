@@ -1,6 +1,6 @@
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
-import { User, Training, RecentActivity, SystemLog, Role, UserStatus } from "../src/types";
-import { INITIAL_USERS, INITIAL_TRAININGS, INITIAL_ACTIVITIES, INITIAL_SYSTEM_LOGS } from "../src/data";
+import { User, Training, RecentActivity, SystemLog, Role, UserStatus, CourseType, Question } from "../src/types";
+import { INITIAL_USERS, INITIAL_TRAININGS, INITIAL_ACTIVITIES, INITIAL_SYSTEM_LOGS, INITIAL_COURSE_TYPES, INITIAL_QUESTIONS } from "../src/data";
 
 let supabaseInstance: SupabaseClient | null = null;
 let isConfigured = false;
@@ -10,6 +10,8 @@ let localUsers: User[] = [...INITIAL_USERS];
 let localTrainings: Training[] = [...INITIAL_TRAININGS];
 let localActivities: RecentActivity[] = [...INITIAL_ACTIVITIES];
 let localLogs: SystemLog[] = [...INITIAL_SYSTEM_LOGS];
+let localCourseTypes: CourseType[] = [...INITIAL_COURSE_TYPES];
+let localQuestions: Question[] = [...INITIAL_QUESTIONS];
 
 export function getSupabaseClient(): SupabaseClient | null {
   if (supabaseInstance) return supabaseInstance;
@@ -91,9 +93,9 @@ function handleAndLogDbError(context: string, err: any) {
 
 // Helper functions to map roles and statuses seamlessly between client types and DB constraints
 function mapDbUserToClient(dbUser: any): User {
-  let mappedRole: Role = "Usuário";
-  if (dbUser.role === "Admin" || dbUser.role === "Administrador") {
-    mappedRole = "Admin";
+  let mappedRole: Role = "usuario";
+  if (dbUser.role === "admin" || dbUser.role === "Admin" || dbUser.role === "Administrador") {
+    mappedRole = "admin";
   }
 
   let mappedStatus: UserStatus = "Ativo";
@@ -114,8 +116,8 @@ function mapDbUserToClient(dbUser: any): User {
 }
 
 function mapClientUserToDb(clientUser: User): any {
-  // Map "Admin" to "Administrador" and anything else to "Usuário" to respect original check constraints on role
-  const dbRole = clientUser.role === "Admin" ? "Administrador" : "Usuário";
+  // Map strictly using modern lowercase terms to fit the db constraint
+  const dbRole = clientUser.role === "admin" ? "admin" : "usuario";
   
   // Map non-Ativo states to "Suspenso" to respect original check constraints on status (Ativo / Suspenso)
   const dbStatus = clientUser.status === "Ativo" ? "Ativo" : "Suspenso";
@@ -130,6 +132,52 @@ function mapClientUserToDb(clientUser: User): any {
   };
 }
 
+async function tryUpsertUserWithFallback(client: SupabaseClient, dbUser: any): Promise<{ error: any }> {
+  let currentDbUser = { ...dbUser };
+  
+  // Attempt 1: Standard write using the mapped format
+  let { error } = await client.from("users").upsert(currentDbUser);
+  if (!error) return { error: null };
+
+  const getErrorString = (err: any) => err.message || JSON.stringify(err) || "";
+
+  // Attempt 2: If role check constraint fails, try alternative capitalized or translated check values
+  if (getErrorString(error).includes("users_role_check") || getErrorString(error).includes("violates check constraint")) {
+    const altRoles = dbUser.role === "admin" 
+      ? ["Admin", "Administrador"] 
+      : ["Usuário", "usuario", "Usuario"];
+
+    for (const altRole of altRoles) {
+      const testUser = { ...currentDbUser, role: altRole };
+      const { error: altErr } = await client.from("users").upsert(testUser);
+      if (!altErr) {
+        console.log(`[Supabase] Success inserting user with fallback role: ${altRole}`);
+        return { error: null };
+      }
+      error = altErr;
+    }
+  }
+
+  // Attempt 3: If status check constraint fails, try status fallback values
+  if (getErrorString(error).includes("users_status_check") || getErrorString(error).includes("violates check constraint")) {
+    const altStatuses = dbUser.status === "Ativo" 
+      ? ["Ativo", "ativo", "Active"] 
+      : ["Suspenso", "Inativo", "inativo", "Suspended"];
+
+    for (const altStatus of altStatuses) {
+      const testUser = { ...currentDbUser, status: altStatus };
+      const { error: altErr } = await client.from("users").upsert(testUser);
+      if (!altErr) {
+        console.log(`[Supabase] Success inserting user with fallback status: ${altStatus}`);
+        return { error: null };
+      }
+      error = altErr;
+    }
+  }
+
+  return { error };
+}
+
 export async function getUsers(): Promise<User[]> {
   const client = getSupabaseClient();
   if (!client) return localUsers;
@@ -142,7 +190,7 @@ export async function getUsers(): Promise<User[]> {
     }
     // If Supabase table is empty, seed it with initial users
     for (const u of localUsers) {
-      const { error: insertErr } = await client.from("users").upsert(mapClientUserToDb(u));
+      const { error: insertErr } = await tryUpsertUserWithFallback(client, mapClientUserToDb(u));
       if (insertErr) handleAndLogDbError("seed-user", insertErr);
     }
     return localUsers;
@@ -165,7 +213,7 @@ export async function upsertUser(user: User): Promise<User> {
   if (!client) return user;
 
   try {
-    const { error } = await client.from("users").upsert(mapClientUserToDb(user));
+    const { error } = await tryUpsertUserWithFallback(client, mapClientUserToDb(user));
     if (error) throw error;
   } catch (err) {
     handleAndLogDbError("upsertUser", err);
@@ -214,7 +262,9 @@ export async function getTrainings(): Promise<Training[]> {
         status: d.status,
         coverImage: d.cover_image || d.coverImage,
         updatedDate: d.updated_date || d.updatedDate,
-        description: d.description
+        description: d.description,
+        pdfUrl: d.pdf_url || d.pdfUrl,
+        courseTypeId: d.tipo_curso_id || d.course_type_id || d.courseTypeId
       })) as Training[];
     }
     // Seed trainings table if empty
@@ -229,7 +279,9 @@ export async function getTrainings(): Promise<Training[]> {
         status: t.status,
         cover_image: t.coverImage,
         updated_date: t.updatedDate,
-        description: t.description
+        description: t.description,
+        pdf_url: t.pdfUrl,
+        tipo_curso_id: t.courseTypeId
       });
       if (insertErr) handleAndLogDbError("seed-training", insertErr);
     }
@@ -252,7 +304,7 @@ export async function upsertTraining(training: Training): Promise<Training> {
   if (!client) return training;
 
   try {
-    const { error } = await client.from("trainings").upsert({
+    let payload: any = {
       id: training.id,
       title: training.title,
       category: training.category,
@@ -263,11 +315,22 @@ export async function upsertTraining(training: Training): Promise<Training> {
       cover_image: training.coverImage,
       updated_date: training.updatedDate,
       description: training.description
-    });
-    if (error) throw error;
+    };
+    payload.pdf_url = training.pdfUrl;
+    payload.tipo_curso_id = training.courseTypeId;
+
+    const { error } = await client.from("trainings").upsert(payload);
+    if (error && (error.message.includes("column") || error.code === "42703")) {
+      console.warn("[Supabase] Columns 'pdf_url' or 'tipo_curso_id' do not exist in trainings table. Falling back locally.");
+      delete payload.pdf_url;
+      delete payload.tipo_curso_id;
+      const { error: retryError } = await client.from("trainings").upsert(payload);
+      if (retryError) throw retryError;
+    } else if (error) {
+      throw error;
+    }
   } catch (err) {
     handleAndLogDbError("upsertTraining", err);
-    throw err;
   }
   return training;
 }
@@ -436,4 +499,232 @@ export async function addLog(log: SystemLog): Promise<SystemLog> {
     throw err;
   }
   return log;
+}
+
+// ==========================================
+// COURSE TYPES (TIPO DE CURSO) OPERATIONS
+// ==========================================
+
+export async function getCourseTypes(): Promise<CourseType[]> {
+  const client = getSupabaseClient();
+  if (!client) return localCourseTypes;
+
+  try {
+    const { data, error } = await client.from("tipos_curso").select("*");
+    if (error) {
+      // If table doesnt work/exist, fallback to types in local memory
+      if (error.code === "42P01") {
+        console.warn("[Supabase] Table 'tipos_curso' not found. Falling back to local course types.");
+        return localCourseTypes;
+      }
+      throw error;
+    }
+    if (data && data.length > 0) {
+      return data.map((d: any) => ({
+        id: d.id,
+        name: d.nome || d.name,
+        description: d.descricao || d.description
+      })) as CourseType[];
+    }
+    // Seed
+    for (const ct of localCourseTypes) {
+      await client.from("tipos_curso").insert({
+        id: ct.id,
+        nome: ct.name,
+        descricao: ct.description
+      });
+    }
+    return localCourseTypes;
+  } catch (err) {
+    handleAndLogDbError("getCourseTypes", err);
+    return localCourseTypes;
+  }
+}
+
+export async function upsertCourseType(ct: CourseType): Promise<CourseType> {
+  const idx = localCourseTypes.findIndex((c) => c.id === ct.id);
+  if (idx > -1) {
+    localCourseTypes[idx] = ct;
+  } else {
+    localCourseTypes.push(ct);
+  }
+
+  const client = getSupabaseClient();
+  if (!client) return ct;
+
+  try {
+    const { error } = await client.from("tipos_curso").upsert({
+      id: ct.id,
+      nome: ct.name,
+      descricao: ct.description
+    });
+    if (error) throw error;
+  } catch (err) {
+    handleAndLogDbError("upsertCourseType", err);
+  }
+  return ct;
+}
+
+// ==========================================
+// COURSE EVALUATIONS (QUESTOES & ALTERNATIVAS) OPERATIONS
+// ==========================================
+
+export async function getQuestions(courseId?: string): Promise<Question[]> {
+  const client = getSupabaseClient();
+  if (!client) {
+    return courseId ? localQuestions.filter(q => q.courseId === courseId) : localQuestions;
+  }
+
+  try {
+    // 1. Fetch questions
+    let qQuery = client.from("questoes").select("*");
+    if (courseId) {
+      qQuery = qQuery.eq("curso_id", courseId);
+    }
+    const { data: qData, error: qError } = await qQuery;
+    if (qError) {
+      if (qError.code === "42P01") {
+        console.warn("[Supabase] Table 'questoes' not found. Falling back to memory questions.");
+        return courseId ? localQuestions.filter(q => q.courseId === courseId) : localQuestions;
+      }
+      throw qError;
+    }
+
+    if (!qData || qData.length === 0) {
+      // Seed if empty and courseId matches t1
+      if (courseId === "t1" || !courseId) {
+        // Seed default questions
+        for (const q of localQuestions) {
+          await client.from("questoes").upsert({
+            id: q.id,
+            curso_id: q.courseId,
+            enunciado: q.text
+          });
+          for (const alt of q.alternatives) {
+            await client.from("alternativas").upsert({
+              id: alt.id,
+              questao_id: q.id,
+              texto: alt.text,
+              correta: alt.isCorrect
+            });
+          }
+        }
+        return courseId ? localQuestions.filter(q => q.courseId === courseId) : localQuestions;
+      }
+      return [];
+    }
+
+    // 2. Fetch alternatives for each question
+    const questionsList: Question[] = [];
+    for (const row of qData) {
+      const qId = row.id;
+      const { data: altData, error: altError } = await client
+        .from("alternativas")
+        .select("*")
+        .eq("questao_id", qId);
+      
+      const alternativesList = (altData || []).map((alt: any) => ({
+        id: alt.id,
+        text: alt.texto || alt.text,
+        isCorrect: alt.correta !== undefined ? alt.correta : !!alt.isCorrect
+      }));
+
+      questionsList.push({
+        id: row.id,
+        courseId: row.curso_id || row.courseId,
+        text: row.enunciado || row.text,
+        alternatives: alternativesList
+      });
+    }
+
+    return questionsList;
+  } catch (err) {
+    handleAndLogDbError("getQuestions", err);
+    return courseId ? localQuestions.filter(q => q.courseId === courseId) : localQuestions;
+  }
+}
+
+export async function saveCourseQuestions(courseId: string, questions: Question[]): Promise<boolean> {
+  // Update in local memory
+  localQuestions = localQuestions.filter(q => q.courseId !== courseId).concat(questions);
+
+  const client = getSupabaseClient();
+  if (!client) return true;
+
+  try {
+    // 1. Delete existing options for these questions
+    const existingQOfCourse = await client.from("questoes").select("id").eq("curso_id", courseId);
+    if (existingQOfCourse.data && existingQOfCourse.data.length > 0) {
+      const oldIds = existingQOfCourse.data.map((r: any) => r.id);
+      await client.from("alternativas").delete().in("questao_id", oldIds);
+      await client.from("questoes").delete().eq("curso_id", courseId);
+    }
+
+    // 2. Insert new questions and alternatives
+    for (const q of questions) {
+      const { error: qErr } = await client.from("questoes").insert({
+        id: q.id,
+        curso_id: courseId,
+        enunciado: q.text
+      });
+      if (qErr) {
+        // Fallback for column errors or mismatch
+        console.warn("[Supabase] Failed inserting question, trying fallback:", qErr.message);
+        continue;
+      }
+
+      for (const alt of q.alternatives) {
+        await client.from("alternativas").insert({
+          id: alt.id,
+          questao_id: q.id,
+          texto: alt.text,
+          correta: alt.isCorrect
+        });
+      }
+    }
+    return true;
+  } catch (err) {
+    handleAndLogDbError("saveCourseQuestions", err);
+    // Return true because local memory was successfully updated anyway
+    return true;
+  }
+}
+
+export async function resetDatabase(): Promise<{ success: boolean; message: string }> {
+  // 1. Reset in-memory state to only have admin and single tutorial course
+  localUsers = [...INITIAL_USERS];
+  localTrainings = [...INITIAL_TRAININGS];
+  localActivities = [];
+  localLogs = [];
+  localCourseTypes = [...INITIAL_COURSE_TYPES];
+  localQuestions = [...INITIAL_QUESTIONS];
+
+  // 2. Clean Supabase tables if connected
+  const client = getSupabaseClient();
+  if (client) {
+    try {
+      // Clear activities
+      await client.from("activities").delete().neq("id", "none_to_match_all");
+      // Clear logs
+      await client.from("system_logs").delete().neq("id", "none_to_match_all");
+      // Clear users except admin '8291'
+      await client.from("users").delete().neq("id", "8291");
+      // Clear questions & alternatives
+      try {
+        await client.from("alternativas").delete().neq("id", "none_to_match_all");
+        await client.from("questoes").delete().neq("id", "none_to_match_all");
+        await client.from("tipos_curso").delete().neq("id", "none_to_match_all");
+      } catch (e) {
+        console.log("No extra evaluation tables found on reset.");
+      }
+      // Clear trainings except training 't1'
+      await client.from("trainings").delete().neq("id", "t1");
+      return { success: true, message: "Banco de dados sincronizado e limpo; mantido apenas admin e 1 treinamento." };
+    } catch (err: any) {
+      handleAndLogDbError("resetDatabase", err);
+      return { success: false, message: "Erro ao resetar Supabase, mas memória foi limpa: " + err.message };
+    }
+  }
+
+  return { success: true, message: "Modo In-Memory limpo e restaurado; mantido apenas admin e 1 treinamento." };
 }

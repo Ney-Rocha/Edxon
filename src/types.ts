@@ -1,4 +1,4 @@
-export type Role = 'Admin' | 'Usuário';
+export type Role = 'admin' | 'usuario';
 export type UserStatus = 'Ativo' | 'Pendente' | 'Inativo';
 export type TrainingStatus = 'Publicado' | 'Rascunho' | 'Arquivado';
 export type TrainingType = 'Vídeo' | 'PDF' | 'Interativo';
@@ -25,6 +25,28 @@ export interface Training {
   coverImage: string;
   updatedDate: string;
   description?: string;
+  videoUrl?: string;
+  pdfUrl?: string;
+  courseTypeId?: string;
+}
+
+export interface CourseType {
+  id: string;
+  name: string;
+  description?: string;
+}
+
+export interface Alternative {
+  id: string;
+  text: string;
+  isCorrect: boolean;
+}
+
+export interface Question {
+  id: string;
+  courseId: string;
+  text: string;
+  alternatives: Alternative[];
 }
 
 export interface RecentActivity {
@@ -59,6 +81,7 @@ export type ViewType =
   | 'admin-trainings'
   | 'admin-new-training'
   | 'admin-reports'
+  | 'parameters'
   | 'student-dashboard'
   | 'student-quiz'
   | 'student-lesson';

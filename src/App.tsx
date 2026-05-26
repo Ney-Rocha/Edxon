@@ -11,7 +11,8 @@ import {
   Book,
   CheckCircle,
   Info,
-  Database
+  Database,
+  RefreshCw
 } from 'lucide-react';
 import { ViewType, Role, User, Training, RecentActivity, SystemLog } from './types';
 import {
@@ -34,6 +35,7 @@ import ReportsView from './components/ReportsView';
 import CreateTrainingView from './components/CreateTrainingView';
 import LessonView from './components/LessonView';
 import LoginView from './components/LoginView';
+import ParametersView from './components/ParametersView';
 
 export default function App() {
   // Core System States
@@ -43,6 +45,39 @@ export default function App() {
   const [systemLogs, setSystemLogs] = useState<SystemLog[]>(INITIAL_SYSTEM_LOGS);
 
   const [dbConnected, setDbConnected] = useState(false);
+  const [isResetting, setIsResetting] = useState(false);
+
+  const handleResetDb = async () => {
+    if (!window.confirm("Atenção: deseja resetar e limpar o banco de dados? Todos os demais colaboradores e treinamentos inseridos serão excluídos, mantendo apenas o Admin e 1 treinamento padrão de exemplo.")) {
+      return;
+    }
+    setIsResetting(true);
+    try {
+      const res = await fetch("/api/db/reset", { method: "POST" }).then(r => r.json());
+      if (res.success) {
+        showSyncToast(res.message, "success");
+        // Re-fetch clean data from server
+        const [usersData, trainingsData, activitiesData, logsData] = await Promise.all([
+          fetch("/api/db/users").then(r => r.json()),
+          fetch("/api/db/trainings").then(r => r.json()),
+          fetch("/api/db/activities").then(r => r.json()),
+          fetch("/api/db/logs").then(r => r.json())
+        ]);
+
+        if (Array.isArray(usersData)) setUsers(usersData);
+        if (Array.isArray(trainingsData)) setTrainings(trainingsData);
+        if (Array.isArray(activitiesData)) setRecentActivities(activitiesData);
+        if (Array.isArray(logsData)) setSystemLogs(logsData);
+      } else {
+        showSyncToast(res.message || "Erro ao limpar bancos de dados.", "error");
+      }
+    } catch (err: any) {
+      console.error(err);
+      showSyncToast("Erro de rede ao resetar banco.", "error");
+    } finally {
+      setIsResetting(false);
+    }
+  };
 
   // Synchronously fetch connection status and data on startup
   useEffect(() => {
@@ -222,7 +257,7 @@ export default function App() {
 
   const [currentUserEmail, setCurrentUserEmail] = useState<string | null>(null);
   const [currentView, setView] = useState<ViewType>('student-dashboard');
-  const [currentRole, setRole] = useState<Role>('Usuário');
+  const [currentRole, setRole] = useState<Role>('usuario');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   // Derived Logged In User
@@ -289,32 +324,105 @@ export default function App() {
       setCurrentUserEmail(existing.email);
       setRole(existing.role);
       setIsLoggedIn(true);
-      setView(existing.role === 'Admin' ? 'admin-dashboard' : 'student-dashboard');
+      setView(existing.role === 'admin' ? 'admin-dashboard' : 'student-dashboard');
     } else {
-      // Create dynamic user depending on admin presence configuration
-      const hasAdmin = users.some((u) => u.role === 'Admin');
-      const determinedRole: Role = hasAdmin ? 'Usuário' : 'Admin';
-
+      // New users registered always default strictly to 'usuario' role
       const newUser: User = {
         id: `u-${Date.now()}`,
         name,
         email,
-        role: determinedRole,
+        role: 'usuario',
         status: 'Ativo',
         avatar: `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(name)}`
       };
 
       syncSetUsers((prev) => [newUser, ...prev]);
       setCurrentUserEmail(email);
-      setRole(determinedRole);
+      setRole('usuario');
       setIsLoggedIn(true);
-      setView(determinedRole === 'Admin' ? 'admin-dashboard' : 'student-dashboard');
+      setView('student-dashboard');
     }
   };
+
+  // Enforce profile-based view access protection (Client-side automatic redirection)
+  useEffect(() => {
+    if (isLoggedIn && loggedInUser) {
+      const userRole = loggedInUser.role;
+      // If role is simple 'usuario', they only have access to core student/training views.
+      // If they try to access admin or general settings (parameters, admin-dashboard, users, reports, new-training etc), redirects to student-dashboard.
+      const allowedStudentViews: ViewType[] = ['student-dashboard', 'student-lesson', 'student-quiz'];
+      if (userRole === 'usuario' && !allowedStudentViews.includes(currentView)) {
+        setView('student-dashboard');
+      }
+    }
+  }, [isLoggedIn, loggedInUser, currentView]);
 
   // Student States (Elevated for full navigation workflow and progress persistence)
   const [studentActiveCourses, setStudentActiveCourses] = useState(STUDENT_ACTIVE_COURSES);
   const [studentAvailableCourses, setStudentAvailableCourses] = useState(STUDENT_AVAILABLE_COURSES);
+
+  // Synchronize new published trainings as available courses for the student
+  useEffect(() => {
+    setStudentAvailableCourses((prevAvailable) => {
+      const published = trainings.filter((t) => t.status === 'Publicado');
+      const toAdd = published.filter((t) => {
+        const inActive = studentActiveCourses.some((ac) => ac.id === t.id || ac.title === t.title);
+        const inAvailable = prevAvailable.some((av) => av.id === t.id || av.title === t.title);
+        return !inActive && !inAvailable;
+      });
+
+      if (toAdd.length > 0) {
+        const mappedAdd = toAdd.map((t) => ({
+          id: t.id,
+          title: t.title,
+          lessonsCount: 4,
+          coverImage: t.coverImage,
+          videoUrl: t.videoUrl,
+          type: t.type
+        }));
+        return [...prevAvailable, ...mappedAdd];
+      }
+      return prevAvailable;
+    });
+  }, [trainings, studentActiveCourses]);
+
+  // Sync details from edits made by Admin back to student lists
+  useEffect(() => {
+    setStudentAvailableCourses((prev) =>
+      prev.map((av) => {
+        const matched = trainings.find((t) => t.id === av.id || t.title === av.title);
+        if (matched) {
+          return {
+            ...av,
+            id: matched.id,
+            title: matched.title,
+            coverImage: matched.coverImage,
+            videoUrl: matched.videoUrl,
+            type: matched.type
+          };
+        }
+        return av;
+      })
+    );
+
+    setStudentActiveCourses((prev) =>
+      prev.map((ac) => {
+        const matched = trainings.find((t) => t.id === ac.id || t.title === ac.title);
+        if (matched) {
+          return {
+            ...ac,
+            id: matched.id,
+            title: matched.title,
+            coverImage: matched.coverImage,
+            videoUrl: matched.videoUrl,
+            type: matched.type
+          };
+        }
+        return ac;
+      })
+    );
+  }, [trainings]);
+
   const [selectedCourseForLesson, setSelectedCourseForLesson] = useState<any>(null);
 
   const handleUpdateStudentProgress = (courseId: string, addedProgress: number) => {
@@ -383,6 +491,8 @@ export default function App() {
         );
       case 'admin-reports':
         return <ReportsView systemLogs={systemLogs} setSystemLogs={syncSetSystemLogs} />;
+      case 'parameters':
+        return <ParametersView currentUser={loggedInUser} dbConnected={dbConnected} />;
       case 'student-dashboard':
         return (
           <StudentDashboardView
@@ -403,7 +513,13 @@ export default function App() {
           />
         );
       case 'student-quiz':
-        return <QuizView setView={setView} />;
+        return (
+          <QuizView
+            setView={setView}
+            course={selectedCourseForLesson}
+            onUpdateProgress={handleUpdateStudentProgress}
+          />
+        );
       default:
         return <div className="text-sm text-slate-500">Visualização indefinida.</div>;
     }
@@ -421,8 +537,6 @@ export default function App() {
       <Navigation
         currentView={currentView}
         setView={setView}
-        currentRole={currentRole}
-        setRole={setRole}
         isMobileOpen={isMobileMenuOpen}
         onClose={() => setIsMobileMenuOpen(false)}
         onLogout={handleLogout}
@@ -456,6 +570,18 @@ export default function App() {
               <span className="hidden sm:inline">{dbConnected ? 'Supabase Conectado' : 'Modo In-Memory'}</span>
               <span className="sm:hidden">{dbConnected ? 'DB Active' : 'Offline'}</span>
             </span>
+            {currentRole === 'admin' && (
+              <button
+                onClick={handleResetDb}
+                disabled={isResetting}
+                title="Limpar todos os dados extras do banco (mantendo apenas admin e 1 curso)"
+                className="p-1 px-2.5 bg-slate-100 hover:bg-rose-50 text-slate-700 hover:text-rose-600 border border-slate-200 hover:border-rose-200 rounded-lg text-xs font-bold transition-all flex items-center gap-1"
+              >
+                <RefreshCw className={`h-3 w-3 ${isResetting ? 'animate-spin' : ''}`} />
+                <span className="hidden sm:inline">{isResetting ? 'Limpando...' : 'Limpar Banco'}</span>
+                <span className="sm:hidden">Reset</span>
+              </button>
+            )}
           </div>
 
           {/* Right Controls bar */}
@@ -464,7 +590,7 @@ export default function App() {
             <button
               onClick={() =>
                 alert(
-                  'Dica de Uso:\nUtilize o botão "Mudar para Visão Aluno" ou "Visão Admin" no canto inferior esquerdo para alternar livremente entre as telas de Administrador e Aluno (incluindo o Quiz do Ricardo Silva).'
+                  'Dica de Uso:\nO sistema gerencia acessos por perfil. Administradores acessam todo o menu operacional, enquanto os Usuários Comuns possuem acesso restrito apenas à Área de Parâmetros.'
                 )
               }
               title="Dicas e Atalhos"
@@ -590,14 +716,14 @@ export default function App() {
             <div className="flex items-center space-x-3">
               <div className="text-right hidden sm:block">
                 <p className="text-xs font-bold text-slate-800">
-                  {loggedInUser ? loggedInUser.name : (currentRole === 'Admin' ? 'Alex Rivera' : 'Ricardo Silva')}
+                  {loggedInUser ? loggedInUser.name : 'Colaborador'}
                 </p>
                 <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">
-                  {loggedInUser ? (loggedInUser.role === 'Admin' ? 'Administrador' : 'Aluno/Colaborador') : (currentRole === 'Admin' ? 'Gerente Geral' : 'Gestor de Vendas')}
+                  {loggedInUser ? (loggedInUser.role === 'admin' ? 'Administrador' : 'Colaborador') : 'Visitante'}
                 </p>
               </div>
               <img
-                src={loggedInUser ? loggedInUser.avatar : (currentRole === 'Admin' ? UI_IMAGES.alexRivera : UI_IMAGES.ricardoSilva)}
+                src={loggedInUser?.avatar || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent('User')}`}
                 alt="Profile Status"
                 className="h-9 w-9 rounded-full object-cover border border-slate-200"
                 referrerPolicy="no-referrer"

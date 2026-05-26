@@ -131,7 +131,7 @@ export default function LoginView({ onLogin, users }: LoginViewProps) {
           <Sparkles className="h-5 w-5 text-white" />
         </div>
         <div>
-          <h1 className="text-lg tracking-tight text-white"><span className="font-black text-indigo-400">E</span><span className="font-light text-slate-200">DXOn</span></h1>
+          <h1 className="text-lg tracking-tight text-white"><span className="font-black text-[#00ED2D]">E</span><span className="font-light text-white">dxon</span></h1>
           <p className="text-[10px] text-slate-400 font-extrabold uppercase tracking-widest">LMS High-Performance</p>
         </div>
       </header>
@@ -286,16 +286,16 @@ export default function LoginView({ onLogin, users }: LoginViewProps) {
                 </div>
                 <div className="flex items-center justify-between p-1.5 bg-slate-900/60 rounded-lg">
                   <span className="text-emerald-300">bruno.santos@educorp.com</span>
-                  <span className="px-1.5 py-0.5 bg-emerald-950/50 text-emerald-400 rounded text-[8px] font-black tracking-wide uppercase">Aluno</span>
+                  <span className="px-1.5 py-0.5 bg-emerald-950/50 text-emerald-400 rounded text-[8px] font-black tracking-wide uppercase">Usuário</span>
                 </div>
                 <div className="flex items-center justify-between p-1.5 bg-slate-900/60 rounded-lg">
                   <span className="text-emerald-300">carla.dias@educorp.com</span>
-                  <span className="px-1.5 py-0.5 bg-emerald-950/50 text-emerald-400 rounded text-[8px] font-black tracking-wide uppercase">Aluno</span>
+                  <span className="px-1.5 py-0.5 bg-emerald-950/50 text-emerald-400 rounded text-[8px] font-black tracking-wide uppercase">Usuário</span>
                 </div>
               </div>
               <p className="text-[10px] text-slate-500 pt-1">
                 * Qualquer nova conta registrada (via e-mail ou social login Microsoft) é criada dinamicamente como 
-                <strong> Aluno (Usuário)</strong>, respeitando a diretriz de papel dinâmico corporativo.
+                <strong> Usuário Comum</strong>, respeitando a diretriz de papel dinâmico corporativo.
               </p>
             </div>
           )}

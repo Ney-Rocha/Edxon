@@ -37,8 +37,9 @@ export default function StudentDashboardView({
         id: course.id,
         title: course.title,
         progress: 0,
-        type: 'Vídeo' as any,
-        coverImage: course.coverImage
+        type: course.type || 'Vídeo',
+        coverImage: course.coverImage,
+        videoUrl: course.videoUrl
       },
       ...prev
     ]);
@@ -143,7 +144,10 @@ export default function StudentDashboardView({
 
                   {c.progress >= 60 && (
                     <button
-                      onClick={() => setView('student-quiz')}
+                      onClick={() => {
+                        onWatchLesson(c);
+                        setView('student-quiz');
+                      }}
                       className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-[11px] font-bold transition-all animate-pulse"
                     >
                       <span>Fazer Prova</span>
