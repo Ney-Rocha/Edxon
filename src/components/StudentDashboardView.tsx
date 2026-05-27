@@ -10,6 +10,7 @@ import {
   Calendar
 } from 'lucide-react';
 import { STUDENT_ACTIVE_COURSES, STUDENT_AVAILABLE_COURSES, UI_IMAGES } from '../data';
+import { User } from '../types';
 
 interface StudentDashboardViewProps {
   setView: (view: any) => void;
@@ -18,6 +19,7 @@ interface StudentDashboardViewProps {
   availableCourses: any[];
   setAvailableCourses: React.Dispatch<React.SetStateAction<any[]>>;
   onWatchLesson: (course: any) => void;
+  currentUser: User | null;
 }
 
 export default function StudentDashboardView({
@@ -26,8 +28,9 @@ export default function StudentDashboardView({
   setActiveCourses,
   availableCourses,
   setAvailableCourses,
-  onWatchLesson
-}: StudentDashboardViewProps) {
+  onWatchLesson,
+  currentUser
+ }: StudentDashboardViewProps) {
   // Enroll dynamic action
   const handleEnroll = (course: any) => {
     // Remove from available and prepend to active at 0% progress
@@ -45,20 +48,30 @@ export default function StudentDashboardView({
     ]);
   };
 
+  const inProgressCount = activeCourses.filter((c) => c.progress < 100).length;
+  const completedCount = activeCourses.filter((c) => c.progress === 100).length;
+  const totalEnrolled = activeCourses.length;
+  const metaPercentage = totalEnrolled > 0 
+    ? Math.round(activeCourses.reduce((acc, curr) => acc + (curr.progress || 0), 0) / totalEnrolled)
+    : 100;
+
   return (
     <div className="space-y-6">
       {/* Student Welcome Header Card */}
       <div className="bg-slate-900 rounded-3xl p-6 md:p-8 text-white relative overflow-hidden shadow-lg border border-slate-800">
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="space-y-2">
-            <span className="px-3 py-1 bg-indigo-500/10 text-indigo-300 rounded-full text-[10px] font-bold uppercase tracking-wider border border-indigo-500/20">
-              Painel do Colaborador
-            </span>
-            <h2 className="text-2xl md:text-3xl font-extrabold tracking-tight">
-              Olá, Ricardo Silva
+            <h2 className="text-xl md:text-2xl font-bold tracking-tight">
+              Olá, {currentUser?.name || 'Colaborador'}
             </h2>
             <p className="text-slate-300 text-sm max-w-xl">
-              Você tem **3 cursos ativos** sob sua responsabilidade técnica hoje. Complete seus módulos para manter sua meta semestral em 100%!
+              {inProgressCount === 0 ? (
+                <span>Você não tem <strong>nenhum curso ativo</strong> sob sua responsabilidade técnica hoje. Matricule-se em novos cursos no catálogo abaixo!</span>
+              ) : inProgressCount === 1 ? (
+                <span>Você tem <strong>1 curso ativo</strong> sob sua responsabilidade técnica hoje. Complete seu módulo para manter sua meta semestral em <strong>{metaPercentage}%</strong>!</span>
+              ) : (
+                <span>Você tem <strong>{inProgressCount} cursos ativos</strong> sob sua responsabilidade técnica hoje. Complete seus módulos para manter sua meta semestral em <strong>{metaPercentage}%</strong>!</span>
+              )}
             </p>
           </div>
 
@@ -66,11 +79,11 @@ export default function StudentDashboardView({
             {/* Metric mini widgets */}
             <div className="bg-white/5 border border-white/10 p-4 rounded-2xl text-center min-w-[90px]">
               <span className="text-slate-400 text-[10px] uppercase font-bold block">Concluídos</span>
-              <span className="text-xl font-bold text-emerald-400 mt-1 block">5</span>
+              <span className="text-xl font-bold text-emerald-400 mt-1 block">{completedCount}</span>
             </div>
             <div className="bg-white/5 border border-white/10 p-4 rounded-2xl text-center min-w-[90px]">
               <span className="text-slate-400 text-[10px] uppercase font-bold block">Horas Aula</span>
-              <span className="text-xl font-bold text-white mt-1 block">18h</span>
+              <span className="text-xl font-bold text-white mt-1 block">{totalEnrolled * 4}h</span>
             </div>
           </div>
         </div>

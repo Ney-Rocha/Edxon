@@ -65,10 +65,18 @@ export default function App() {
           dbService.getLogs()
         ]);
 
-        if (Array.isArray(usersData)) setUsers(usersData);
-        if (Array.isArray(trainingsData)) setTrainings(trainingsData);
-        if (Array.isArray(activitiesData)) setRecentActivities(activitiesData);
-        if (Array.isArray(logsData)) setSystemLogs(logsData);
+        if (Array.isArray(usersData)) {
+          setUsers(Array.from(new Map(usersData.map(u => [u.id, u])).values()));
+        }
+        if (Array.isArray(trainingsData)) {
+          setTrainings(Array.from(new Map(trainingsData.map(t => [t.id, t])).values()));
+        }
+        if (Array.isArray(activitiesData)) {
+          setRecentActivities(Array.from(new Map(activitiesData.map(a => [a.id, a])).values()));
+        }
+        if (Array.isArray(logsData)) {
+          setSystemLogs(Array.from(new Map(logsData.map(l => [l.id, l])).values()));
+        }
       } else {
         showSyncToast(res.message || "Erro ao limpar bancos de dados.", "error");
       }
@@ -94,10 +102,18 @@ export default function App() {
           dbService.getLogs()
         ]);
 
-        if (Array.isArray(usersData)) setUsers(usersData);
-        if (Array.isArray(trainingsData)) setTrainings(trainingsData);
-        if (Array.isArray(activitiesData)) setRecentActivities(activitiesData);
-        if (Array.isArray(logsData)) setSystemLogs(logsData);
+        if (Array.isArray(usersData)) {
+          setUsers(Array.from(new Map(usersData.map(u => [u.id, u])).values()));
+        }
+        if (Array.isArray(trainingsData)) {
+          setTrainings(Array.from(new Map(trainingsData.map(t => [t.id, t])).values()));
+        }
+        if (Array.isArray(activitiesData)) {
+          setRecentActivities(Array.from(new Map(activitiesData.map(a => [a.id, a])).values()));
+        }
+        if (Array.isArray(logsData)) {
+          setSystemLogs(Array.from(new Map(logsData.map(l => [l.id, l])).values()));
+        }
       } catch (err) {
         console.error("Error communicating with integration backend:", err);
       }
@@ -161,7 +177,8 @@ export default function App() {
         });
       }
 
-      return nextValue;
+      const uniqueNext = Array.from(new Map(nextValue.map((u: any) => [u.id, u])).values()) as User[];
+      return uniqueNext;
     });
   };
 
@@ -194,7 +211,8 @@ export default function App() {
         });
       }
 
-      return nextValue;
+      const uniqueNext = Array.from(new Map(nextValue.map((t: any) => [t.id, t])).values()) as Training[];
+      return uniqueNext;
     });
   };
 
@@ -211,7 +229,8 @@ export default function App() {
         }
       }
 
-      return nextValue;
+      const uniqueNext = Array.from(new Map(nextValue.map((a: any) => [a.id, a])).values()) as RecentActivity[];
+      return uniqueNext;
     });
   };
 
@@ -479,6 +498,7 @@ export default function App() {
             availableCourses={studentAvailableCourses}
             setAvailableCourses={setStudentAvailableCourses}
             onWatchLesson={handleWatchLesson}
+            currentUser={loggedInUser}
           />
         );
       case 'student-lesson':
