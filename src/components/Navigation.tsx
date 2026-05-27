@@ -94,12 +94,6 @@ export default function Navigation({
           {/* Navigation Menu */}
           <div className="space-y-6">
             <div>
-              <div className="flex items-center justify-between px-3 mb-2 text-xs font-semibold uppercase tracking-wider text-slate-500">
-                <span>Menu Principal</span>
-                <span className="px-1.5 py-0.5 text-[10px] rounded-full bg-slate-800 text-slate-300 uppercase tracking-widest font-extrabold">
-                  {role === 'admin' ? 'Admin' : 'Usuário'}
-                </span>
-              </div>
               <nav className="space-y-1">
                 {role === 'admin'
                   ? adminMenuItems.map((item) => {

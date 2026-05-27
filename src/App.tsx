@@ -556,11 +556,6 @@ export default function App() {
             >
               <Menu className="h-5 w-5" />
             </button>
-            <span className="p-1 px-2.5 bg-indigo-50 text-indigo-700 rounded-lg text-xs font-bold leading-normal border border-indigo-100 flex items-center gap-1">
-              <ShieldCheck className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">Conformidade Ativa</span>
-              <span className="sm:hidden">Ativa</span>
-            </span>
             <span className={`p-1 px-2.5 rounded-lg text-xs font-bold leading-normal border flex items-center gap-1 ${
               dbConnected 
                 ? 'bg-emerald-50 text-emerald-700 border-emerald-100' 
@@ -570,34 +565,10 @@ export default function App() {
               <span className="hidden sm:inline">{dbConnected ? 'Supabase Conectado' : 'Modo In-Memory'}</span>
               <span className="sm:hidden">{dbConnected ? 'DB Active' : 'Offline'}</span>
             </span>
-            {currentRole === 'admin' && (
-              <button
-                onClick={handleResetDb}
-                disabled={isResetting}
-                title="Limpar todos os dados extras do banco (mantendo apenas admin e 1 curso)"
-                className="p-1 px-2.5 bg-slate-100 hover:bg-rose-50 text-slate-700 hover:text-rose-600 border border-slate-200 hover:border-rose-200 rounded-lg text-xs font-bold transition-all flex items-center gap-1"
-              >
-                <RefreshCw className={`h-3 w-3 ${isResetting ? 'animate-spin' : ''}`} />
-                <span className="hidden sm:inline">{isResetting ? 'Limpando...' : 'Limpar Banco'}</span>
-                <span className="sm:hidden">Reset</span>
-              </button>
-            )}
           </div>
 
           {/* Right Controls bar */}
           <div className="flex items-center space-x-4">
-            {/* Direct Info help */}
-            <button
-              onClick={() =>
-                alert(
-                  'Dica de Uso:\nO sistema gerencia acessos por perfil. Administradores acessam todo o menu operacional, enquanto os Usuários Comuns possuem acesso restrito apenas à Área de Parâmetros.'
-                )
-              }
-              title="Dicas e Atalhos"
-              className="p-2 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-50 transition-colors"
-            >
-              <HelpCircle className="h-5 w-5" />
-            </button>
 
             {/* Notification Badge indicator */}
             <div className="relative">
