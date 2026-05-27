@@ -26,6 +26,7 @@ import {
 } from './data';
 
 import Navigation from './components/Navigation';
+import * as dbService from './lib/databaseService';
 import DashboardView from './components/DashboardView';
 import UserManagementView from './components/UserManagementView';
 import TrainingsView from './components/TrainingsView';
@@ -53,15 +54,15 @@ export default function App() {
     }
     setIsResetting(true);
     try {
-      const res = await fetch("/api/db/reset", { method: "POST" }).then(r => r.json());
+      const res = await dbService.resetDatabase();
       if (res.success) {
         showSyncToast(res.message, "success");
-        // Re-fetch clean data from server
+        // Re-fetch clean data
         const [usersData, trainingsData, activitiesData, logsData] = await Promise.all([
-          fetch("/api/db/users").then(r => r.json()),
-          fetch("/api/db/trainings").then(r => r.json()),
-          fetch("/api/db/activities").then(r => r.json()),
-          fetch("/api/db/logs").then(r => r.json())
+          dbService.getUsers(),
+          dbService.getTrainings(),
+          dbService.getActivities(),
+          dbService.getLogs()
         ]);
 
         if (Array.isArray(usersData)) setUsers(usersData);
@@ -83,14 +84,14 @@ export default function App() {
   useEffect(() => {
     async function initDbData() {
       try {
-        const statusRes = await fetch("/api/db/status").then(r => r.json());
-        setDbConnected(!!statusRes.configured);
+        const { mode, configured } = await dbService.initConnection();
+        setDbConnected(configured);
 
         const [usersData, trainingsData, activitiesData, logsData] = await Promise.all([
-          fetch("/api/db/users").then(r => r.json()),
-          fetch("/api/db/trainings").then(r => r.json()),
-          fetch("/api/db/activities").then(r => r.json()),
-          fetch("/api/db/logs").then(r => r.json())
+          dbService.getUsers(),
+          dbService.getTrainings(),
+          dbService.getActivities(),
+          dbService.getLogs()
         ]);
 
         if (Array.isArray(usersData)) setUsers(usersData);
@@ -138,18 +139,14 @@ export default function App() {
       if (nextValue.length > prevUsers.length) {
         const added = nextValue.find(nu => !prevUsers.some(ou => ou.id === nu.id));
         if (added) {
-          handleFetchSync("/api/db/users", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(added)
-          }).then(() => {
+          dbService.upsertUser(added).then(() => {
             showSyncToast(`Colaborador ${added.name} cadastrado com sucesso!`, 'success');
           }).catch(() => {});
         }
       } else if (nextValue.length < prevUsers.length) {
         const deleted = prevUsers.find(ou => !nextValue.some(nu => nu.id === ou.id));
         if (deleted) {
-          handleFetchSync(`/api/db/users/${deleted.id}`, { method: "DELETE" }).then(() => {
+          dbService.deleteUser(deleted.id).then(() => {
             showSyncToast(`Colaborador ${deleted.name} excluído com sucesso!`, 'success');
           }).catch(() => {});
         }
@@ -157,11 +154,7 @@ export default function App() {
         nextValue.forEach(nu => {
           const ou = prevUsers.find(o => o.id === nu.id);
           if (ou && JSON.stringify(ou) !== JSON.stringify(nu)) {
-            handleFetchSync("/api/db/users", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify(nu)
-            }).then(() => {
+            dbService.upsertUser(nu).then(() => {
               showSyncToast(`Dados/Status de ${nu.name} sincronizados!`, 'success');
             }).catch(() => {});
           }
@@ -179,18 +172,14 @@ export default function App() {
       if (nextValue.length > prevTrainings.length) {
         const added = nextValue.find(nt => !prevTrainings.some(ot => ot.id === nt.id));
         if (added) {
-          handleFetchSync("/api/db/trainings", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(added)
-          }).then(() => {
+          dbService.upsertTraining(added).then(() => {
             showSyncToast(`Treinamento "${added.title}" adicionado ao Supabase!`, 'success');
           }).catch(() => {});
         }
       } else if (nextValue.length < prevTrainings.length) {
         const deleted = prevTrainings.find(ot => !nextValue.some(nt => nt.id === ot.id));
         if (deleted) {
-          handleFetchSync(`/api/db/trainings/${deleted.id}`, { method: "DELETE" }).then(() => {
+          dbService.deleteTraining(deleted.id).then(() => {
             showSyncToast(`Treinamento "${deleted.title}" excluído do Supabase!`, 'success');
           }).catch(() => {});
         }
@@ -198,11 +187,7 @@ export default function App() {
         nextValue.forEach(nt => {
           const ot = prevTrainings.find(o => o.id === nt.id);
           if (ot && JSON.stringify(ot) !== JSON.stringify(nt)) {
-            handleFetchSync("/api/db/trainings", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify(nt)
-            }).then(() => {
+            dbService.upsertTraining(nt).then(() => {
               showSyncToast(`Treinamento "${nt.title}" editado e salvo!`, 'success');
             }).catch(() => {});
           }
@@ -220,12 +205,8 @@ export default function App() {
       if (nextValue.length > prevActivities.length) {
         const added = nextValue.find(na => !prevActivities.some(oa => oa.id === na.id));
         if (added) {
-          handleFetchSync("/api/db/activities", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(added)
-          }).then(() => {
-            // Quiet, no successful toast needed for background activities tracker to avoid visual spam
+          dbService.addActivity(added).then(() => {
+            // Quiet
           }).catch(() => {});
         }
       }
@@ -241,12 +222,8 @@ export default function App() {
       if (nextValue.length > prevLogs.length) {
         const added = nextValue.find(nl => !prevLogs.some(ol => ol.id === nl.id));
         if (added) {
-          handleFetchSync("/api/db/logs", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(added)
-          }).then(() => {
-            // Background log tracker status success
+          dbService.addLog(added).then(() => {
+            // Quiet
           }).catch(() => {});
         }
       }
@@ -558,11 +535,17 @@ export default function App() {
             </button>
             <span className={`p-1 px-2.5 rounded-lg text-xs font-bold leading-normal border flex items-center gap-1 ${
               dbConnected 
-                ? 'bg-emerald-50 text-emerald-700 border-emerald-100' 
+                ? 'bg-emerald-50 text-emerald-750 border-emerald-100' 
                 : 'bg-amber-50 text-amber-700 border-amber-100'
             }`}>
               <Database className="h-3.5 w-3.5 animate-pulse" />
-              <span className="hidden sm:inline">{dbConnected ? 'Supabase Conectado' : 'Modo In-Memory'}</span>
+              <span className="hidden sm:inline">
+                {dbConnected 
+                  ? (dbService.getDatabaseMode() === 'direct' 
+                      ? 'Supabase Conectado (Browser)' 
+                      : 'Supabase Conectado') 
+                  : 'Modo In-Memory'}
+              </span>
               <span className="sm:hidden">{dbConnected ? 'DB Active' : 'Offline'}</span>
             </span>
           </div>

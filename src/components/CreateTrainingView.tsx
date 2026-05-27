@@ -19,6 +19,7 @@ import {
   HelpCircle as QuestionIcon
 } from 'lucide-react';
 import { Training, TrainingType, TrainingStatus, CourseType, Question, Alternative } from '../types';
+import * as dbService from '../lib/databaseService';
 
 interface CreateTrainingViewProps {
   trainings: Training[];
@@ -77,8 +78,7 @@ export default function CreateTrainingView({
   // Fetch Course Types & Quiz Questions on mount
   useEffect(() => {
     // 1. Fetch Types
-    fetch('/api/db/course-types')
-      .then((res) => res.json())
+    dbService.getCourseTypes()
       .then((data) => {
         if (Array.isArray(data)) {
           setCourseTypes(data);
@@ -93,8 +93,7 @@ export default function CreateTrainingView({
       .catch((err) => console.error('Erro ao buscar tipos de curso:', err));
 
     // 2. Fetch Questions
-    fetch(`/api/db/questions?courseId=${courseId}`)
-      .then((res) => res.json())
+    dbService.getQuestions(courseId)
       .then((data) => {
         if (Array.isArray(data)) {
           setQuestions(data);
@@ -146,19 +145,9 @@ export default function CreateTrainingView({
       reader.onloadend = async () => {
         try {
           const base64Content = (reader.result as string).split(',')[1];
-          const response = await fetch('/api/db/upload', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              fileBase64: base64Content,
-              fileName: file.name,
-              fileType: 'application/pdf'
-            })
-          });
-
-          const data = await response.json();
-          if (data.url) {
-            setPdfUrl(data.url);
+          const data = await dbService.uploadFile(base64Content, file.name, 'application/pdf');
+          if (data && (data as any).publicUrl) {
+            setPdfUrl((data as any).publicUrl);
           } else {
             alert('Falha ao registrar PDF. Tente novamente.');
           }
@@ -185,14 +174,8 @@ export default function CreateTrainingView({
         description: newTypeDesc.trim() || undefined
       };
 
-      const res = await fetch('/api/db/course-types', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newTypeObject)
-      });
-
-      if (res.ok) {
-        const saved = await res.json();
+      const saved = await dbService.upsertCourseType(newTypeObject);
+      if (saved) {
         setCourseTypes((prev) => [...prev, saved]);
         setSelectedCourseTypeId(saved.id);
         setNewTypeName('');
@@ -386,11 +369,7 @@ export default function CreateTrainingView({
 
     // Save Questions/Alternatives nested
     try {
-      await fetch(`/api/db/questions/${courseId}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(questions)
-      });
+      await dbService.saveCourseQuestions(courseId, questions);
     } catch (err) {
       console.error('Erro ao salvar avaliações do curso:', err);
     }

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import * as dbService from '../lib/databaseService';
 import {
   Brain,
   ArrowLeft,
@@ -31,8 +32,7 @@ export default function QuizView({ setView, course, onUpdateProgress }: QuizView
     }
 
     setLoading(true);
-    fetch(`/api/db/questions?courseId=${course.id}`)
-      .then((res) => res.json())
+    dbService.getQuestions(course.id)
       .then((data) => {
         if (Array.isArray(data) && data.length > 0) {
           setQuestions(data);
