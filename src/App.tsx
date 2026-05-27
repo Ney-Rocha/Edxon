@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Bell,
   Search,
@@ -259,52 +259,187 @@ export default function App() {
   // Derived Logged In User
   const loggedInUser = users.find(u => u.email.toLowerCase() === (currentUserEmail || '').toLowerCase()) || null;
 
+  // Student States (Elevated for full navigation workflow and progress persistence)
+  const [studentActiveCourses, setStudentActiveCourses] = useState(STUDENT_ACTIVE_COURSES);
+  const [studentAvailableCourses, setStudentAvailableCourses] = useState(STUDENT_AVAILABLE_COURSES);
+
   // Authentication & Notifications state hooks
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
-  const [notifications, setNotifications] = useState([
-    {
-      id: 'n1',
-      title: 'Capacitação pendente',
-      description: 'Você precisa concluir a trilha de LGPD & Segurança cibernética.',
-      time: 'Há 5 min',
-      isRead: false,
-      type: 'alert'
-    },
-    {
-      id: 'n2',
-      title: 'PDI Atualizado',
-      description: 'Gestor Alex Rivera adicionou uma nova meta de vídeos recomendados.',
-      time: 'Há 1 hora',
-      isRead: false,
-      type: 'course'
-    },
-    {
-      id: 'n3',
-      title: 'Quiz Concluído',
-      description: 'Ricardo Silva completou a prova com pontuação de 90%.',
-      time: 'Há 3 horas',
-      isRead: true,
-      type: 'success'
-    },
-    {
-      id: 'n4',
-      title: 'Compliance regulatória ativada',
-      description: 'Seu perfil está 100% em conformidade com as regras institucionais.',
-      time: 'Ontem',
-      isRead: true,
-      type: 'info'
+  // Persistent, dynamic notification read tracker hook
+  const [readNotificationIds, setReadNotificationIds] = useState<string[]>(() => {
+    try {
+      const raw = localStorage.getItem(`edxon_read_notifications_${currentUserEmail || 'guest'}`);
+      return raw ? JSON.parse(raw) : [];
+    } catch {
+      return [];
     }
-  ]);
+  });
+
+  // Sync loaded read states on email change
+  useEffect(() => {
+    if (currentUserEmail) {
+      try {
+        const raw = localStorage.getItem(`edxon_read_notifications_${currentUserEmail}`);
+        setReadNotificationIds(raw ? JSON.parse(raw) : []);
+      } catch {
+        setReadNotificationIds([]);
+      }
+    }
+  }, [currentUserEmail]);
+
+  // Derived Dynamic Notifications fully from database resources (Courses, Activities, Progress)
+  const notifications = useMemo(() => {
+    const list: any[] = [];
+    const isAdmin = currentRole === 'admin';
+
+    // 1. Course Publication & drafts checking
+    trainings.forEach((t) => {
+      if (t.status === 'Publicado') {
+        if (!isAdmin) {
+          list.push({
+            id: `new-course-${t.id}`,
+            title: 'Novo Curso Disponível!',
+            description: `O treinamento de "${t.category}" intitulado "${t.title}" está disponível para matrícula no catálogo.`,
+            time: t.updatedDate || 'Recente',
+            isRead: readNotificationIds.includes(`new-course-${t.id}`),
+            type: 'course'
+          });
+        } else {
+          list.push({
+            id: `new-course-admin-${t.id}`,
+            title: 'Treinamento Ativo',
+            description: `O curso "${t.title}" está publicado e recebendo capacitações de alunos.`,
+            time: t.updatedDate || 'Recente',
+            isRead: readNotificationIds.includes(`new-course-admin-${t.id}`),
+            type: 'course'
+          });
+        }
+      } else if (t.status === 'Rascunho' && isAdmin) {
+        list.push({
+          id: `draft-course-admin-${t.id}`,
+          title: 'Curso Pendente de Publicação',
+          description: `O curso de "${t.category}" está salvo em rascunho. Publique para liberar aos alunos.`,
+          time: t.updatedDate || 'Modificado',
+          isRead: readNotificationIds.includes(`draft-course-admin-${t.id}`),
+          type: 'alert'
+        });
+      }
+    });
+
+    // 2. Quiz / Lesson completions from recentActivities logs
+    recentActivities.forEach((act) => {
+      const isCompleted = act.action.toLowerCase().includes('concluiu') || 
+                          act.action.toLowerCase().includes('completou') || 
+                          act.action.toLowerCase().includes('prova') || 
+                          act.action.toLowerCase().includes('finalizou');
+      
+      const isMyActivity = act.user?.email?.toLowerCase() === (currentUserEmail || '').toLowerCase() || 
+                           act.user?.name === loggedInUser?.name;
+
+      if (isAdmin) {
+        // Admin receives updates on general activity
+        list.push({
+          id: `activity-${act.id}`,
+          title: isCompleted ? 'Capacitação Concluída' : 'Atividade do Aluno',
+          description: `${act.user?.name || 'Colaborador'}: ${act.action}`,
+          time: act.time || 'Recente',
+          isRead: readNotificationIds.includes(`activity-${act.id}`),
+          type: isCompleted ? 'success' : 'info'
+        });
+      } else {
+        // Student sees their own completions or social accomplishments
+        if (isMyActivity) {
+          list.push({
+            id: `activity-${act.id}`,
+            title: isCompleted ? 'Avaliação Concluída!' : 'Atividade Pessoal',
+            description: `Você ${act.action.replace('Você e ', '').replace('Você ', '')}`,
+            time: act.time || 'Recente',
+            isRead: readNotificationIds.includes(`activity-${act.id}`),
+            type: isCompleted ? 'success' : 'info'
+          });
+        } else if (isCompleted) {
+          // Social proof notifications
+          list.push({
+            id: `activity-${act.id}`,
+            title: 'Colega Capacitado ⭐',
+            description: `${act.user?.name || 'Um colaborador'} concluiu com êxito: ${act.action.replace('Você e ', '').replace('Você ', '')}`,
+            time: act.time || 'Recente',
+            isRead: readNotificationIds.includes(`activity-${act.id}`),
+            type: 'success'
+          });
+        }
+      }
+    });
+
+    // 3. Operational Pendencies
+    if (!isAdmin) {
+      // If student has active courses with progress under 100%
+      studentActiveCourses.forEach((sac) => {
+        if (sac.progress < 100) {
+          list.push({
+            id: `student-pendency-${sac.id}`,
+            title: 'Curso Pendente',
+            description: `Complete seus estudos em "${sac.title}". Seu progresso atual é de ${sac.progress}%.`,
+            time: 'Ação requerida',
+            isRead: readNotificationIds.includes(`student-pendency-${sac.id}`),
+            type: 'alert'
+          });
+        }
+      });
+    } else {
+      // Admin global pendencies - check for empty descriptions or courses
+      const draftsCount = trainings.filter(t => t.status === 'Rascunho').length;
+      if (draftsCount > 0) {
+        list.push({
+          id: `admin-drafts-summary`,
+          title: 'Revisão Necessária',
+          description: `Há ${draftsCount} treinamento(s) em rascunho pendentes de publicação formal no LMS.`,
+          time: 'Pendente',
+          isRead: readNotificationIds.includes(`admin-drafts-summary`),
+          type: 'alert'
+        });
+      }
+    }
+
+    // Default system welcome is always present
+    list.push({
+      id: 'default-system-info',
+      title: 'Sistema EDXOn Ativo',
+      description: 'LMS Corporativo conectado de forma síncrona com o Supabase e pronto para capacitação.',
+      time: 'Diretriz',
+      isRead: readNotificationIds.includes('default-system-info'),
+      type: 'info'
+    });
+
+    // Deduplicate by ID
+    const unique = Array.from(new Map(list.map(n => [n.id, n])).values());
+
+    // Sort: unread first
+    return unique.sort((a, b) => {
+      if (a.isRead !== b.isRead) {
+        return a.isRead ? 1 : -1;
+      }
+      return 0;
+    });
+  }, [trainings, recentActivities, studentActiveCourses, currentRole, currentUserEmail, readNotificationIds, loggedInUser]);
 
   const handleMarkAllAsRead = () => {
-    setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
+    const allIds = notifications.map((n) => n.id);
+    setReadNotificationIds(allIds);
+    if (currentUserEmail) {
+      localStorage.setItem(`edxon_read_notifications_${currentUserEmail}`, JSON.stringify(allIds));
+    }
   };
 
   const handleToggleReadStatus = (id: string) => {
-    setNotifications((prev) =>
-      prev.map((n) => (n.id === id ? { ...n, isRead: !n.isRead } : n))
-    );
+    setReadNotificationIds((prev) => {
+      const next = prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id];
+      if (currentUserEmail) {
+        localStorage.setItem(`edxon_read_notifications_${currentUserEmail}`, JSON.stringify(next));
+      }
+      return next;
+    });
   };
 
   const handleLogout = () => {
@@ -353,9 +488,7 @@ export default function App() {
     }
   }, [isLoggedIn, loggedInUser, currentView]);
 
-  // Student States (Elevated for full navigation workflow and progress persistence)
-  const [studentActiveCourses, setStudentActiveCourses] = useState(STUDENT_ACTIVE_COURSES);
-  const [studentAvailableCourses, setStudentAvailableCourses] = useState(STUDENT_AVAILABLE_COURSES);
+
 
   // Synchronize new published trainings as available courses for the student
   useEffect(() => {
