@@ -100,6 +100,30 @@ O sistema conta com um canal de comunicação bidirecional com o Supabase atrav�
 
 ---
 
+## 🚀 Tecnologias Empregadas (Full-Stack Architecture)
+
+O projeto está estruturado sobre uma arquitetura robusta dividida em três camadas principais:
+
+### 1. Front-end (Camada Cliente)
+* **React 18 & TypeScript:** Framework de alta performance para renderização e componentização modular segura do LMS corporativo.
+* **Vite:** Ferramenta ultra-rápida de empacotamento (Bundler) e desenvolvimento local.
+* **Tailwind CSS:** Framework utilitário de estilização responsiva focado em espaçamentos rigorosos, tipografias ricas e conformidade de alto contraste.
+* **Lucide React:** Coleção de ícones vetoriais unificada de alta definição.
+* **Recharts:** Biblioteca baseada em SVG e React para gráficos dinâmicos nos relatórios administrativos.
+
+### 2. Back-end (Servidor Proxy)
+* **Express & Node.js:** Servidor customizado servindo sob a porta `3000` em conformidade com o ingresso de portas Cloud Run.
+* **Vite Middleware Integration:** Acoplador dinâmico de recursos em tempo de desenvolvimento que em produção muda instantaneamente para servir o build estático compilado sob `dist/`.
+* **Proxy de API Seguro (`/api/*`):** Interceptação protegida para solicitações do Supabase e rotas internas, eliminando vazamento corporativo de dados locais.
+* **Integração Gemini API (Google GenAI SDK):** Chamadas inteligentes server-side para gerar estruturas e ementas técnicas a partir de inputs no formulário de criação.
+
+### 3. Banco de Dados / Armazenamento (Camada de Dados)
+* **Supabase (PostgreSQL):** Banco de dados relacional hospedado em nuvem provendo persistência dinâmica para os esquemas corporativos (tabelas de usuários, treinamentos, logs e atividades).
+* **Supabase Storage Buckets:** Repositório online (`training-materials`) para upload de apoio em arquivos PDF do curso.
+* **mecanismo Fallback In-Memory:** Mecanismo de persistência redundante em memória que assume de forma transparente em caso de ausência de chaves ambientais do Supabase, evitando travamento ou erros de inicialização.
+
+---
+
 ## 📈 Resumo das Últimas Alterações Realizadas
 
 1. **Integração Completa Supabase Full-Stack:** Adicionado serviço utilitário `/server/supabase.ts` acoplado ao `server.ts` provendo endpoints em `/api/db/*` para sincronização transparente de Usuários, Treinamentos, Atividades Recentes e Logs do Sistema.
