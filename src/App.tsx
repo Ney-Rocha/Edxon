@@ -515,55 +515,178 @@ export default function App() {
     });
   }, [trainings, studentActiveCourses]);
 
-  // Sync details from edits made by Admin back to student lists
+  // Sync details from edits/deletions made by Admin back to student lists
   useEffect(() => {
-    setStudentAvailableCourses((prev) =>
-      prev.map((av) => {
-        const matched = trainings.find((t) => t.id === av.id || t.title === av.title);
-        if (matched) {
-          return {
-            ...av,
-            id: matched.id,
-            title: matched.title,
-            coverImage: matched.coverImage,
-            videoUrl: matched.videoUrl,
-            type: matched.type
-          };
-        }
-        return av;
-      })
-    );
+    setStudentAvailableCourses((prev) => {
+      return prev
+        .map((av) => {
+          const matched = trainings.find((t) => t.id === av.id || t.title === av.title);
+          if (matched && matched.status === 'Publicado') {
+            return {
+              ...av,
+              id: matched.id,
+              title: matched.title,
+              coverImage: matched.coverImage,
+              videoUrl: matched.videoUrl,
+              type: matched.type
+            };
+          }
+          return null;
+        })
+        .filter((av): av is any => av !== null);
+    });
 
-    setStudentActiveCourses((prev) =>
-      prev.map((ac) => {
-        const matched = trainings.find((t) => t.id === ac.id || t.title === ac.title);
-        if (matched) {
-          return {
-            ...ac,
-            id: matched.id,
-            title: matched.title,
-            coverImage: matched.coverImage,
-            videoUrl: matched.videoUrl,
-            type: matched.type
-          };
-        }
-        return ac;
-      })
-    );
+    setStudentActiveCourses((prev) => {
+      return prev
+        .map((ac) => {
+          const matched = trainings.find((t) => t.id === ac.id || t.title === ac.title);
+          if (matched) {
+            return {
+              ...ac,
+              id: matched.id,
+              title: matched.title,
+              coverImage: matched.coverImage,
+              videoUrl: matched.videoUrl,
+              type: matched.type
+            };
+          }
+          return null;
+        })
+        .filter((ac): ac is any => ac !== null);
+    });
   }, [trainings]);
 
   const [selectedCourseForLesson, setSelectedCourseForLesson] = useState<any>(null);
 
+  const handleEnrollCourse = (course: any) => {
+    const userName = loggedInUser?.name || 'Colaborador';
+    const timestampStr = new Date().toLocaleString('pt-BR', { hour12: false });
+    const userInitials = userName.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() || 'US';
+
+    const act: RecentActivity = {
+      id: `act-enroll-${Date.now()}`,
+      user: {
+        name: userName,
+        avatar: loggedInUser?.avatar || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(userName)}`
+      },
+      action: `Iniciou a trilha de capacitação: "${course.title}".`,
+      status: 'IN_PROGRESS',
+      time: 'Agora mesmo'
+    };
+
+    const sysLog: SystemLog = {
+      id: `log-enroll-${Date.now()}`,
+      timestamp: timestampStr,
+      user: { name: userName, initials: userInitials, bgColor: 'bg-indigo-100', textColor: 'text-indigo-800' },
+      action: 'Matrícula em Curso',
+      training: course.title,
+      ip: '192.168.1.189',
+      status: 'Sucesso'
+    };
+
+    setRecentActivities(prev => {
+      const next = [act, ...prev];
+      return Array.from(new Map(next.map(a => [a.id, a])).values());
+    });
+    setSystemLogs(prev => {
+      const next = [sysLog, ...prev];
+      return Array.from(new Map(next.map(l => [l.id, l])).values());
+    });
+
+    dbService.addActivity(act).catch(e => console.error(e));
+    dbService.addLog(sysLog).catch(e => console.error(e));
+  };
+
   const handleUpdateStudentProgress = (courseId: string, addedProgress: number) => {
+    let courseTitle = 'Treinamento';
+    let isCompleting = false;
+
     setStudentActiveCourses((prev) =>
       prev.map((c) => {
         if (c.id === courseId) {
+          courseTitle = c.title;
           const nextProgress = Math.min(c.progress + addedProgress, 100);
+          if (c.progress < 100 && nextProgress === 100) {
+            isCompleting = true;
+          }
           return { ...c, progress: nextProgress };
         }
         return c;
       })
     );
+
+    const userName = loggedInUser?.name || 'Colaborador';
+    const timestampStr = new Date().toLocaleString('pt-BR', { hour12: false });
+    const userInitials = userName.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() || 'US';
+
+    if (isCompleting) {
+      const act: RecentActivity = {
+        id: `act-comp-${Date.now()}`,
+        user: {
+          name: userName,
+          avatar: loggedInUser?.avatar || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(userName)}`
+        },
+        action: `Concluiu o treinamento "${courseTitle}" com 100% de progresso certificado.`,
+        status: 'SUCCESS',
+        time: 'Agora mesmo'
+      };
+
+      const sysLog: SystemLog = {
+        id: `log-comp-${Date.now()}`,
+        timestamp: timestampStr,
+        user: { name: userName, initials: userInitials, bgColor: 'bg-emerald-100', textColor: 'text-emerald-800' },
+        action: 'Conclusão de Módulo',
+        training: courseTitle,
+        ip: '192.168.1.189',
+        status: 'Sucesso'
+      };
+
+      setRecentActivities(prev => {
+        const next = [act, ...prev];
+        return Array.from(new Map(next.map(a => [a.id, a])).values());
+      });
+      setSystemLogs(prev => {
+        const next = [sysLog, ...prev];
+        return Array.from(new Map(next.map(l => [l.id, l])).values());
+      });
+
+      dbService.addActivity(act).catch(e => console.error(e));
+      dbService.addLog(sysLog).catch(e => console.error(e));
+    } else {
+      const act: RecentActivity = {
+        id: `act-prog-${Date.now()}`,
+        user: {
+          name: userName,
+          avatar: loggedInUser?.avatar || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(userName)}`
+        },
+        action: `Visualizou e progrediu na trilha: "${courseTitle}".`,
+        status: 'IN_PROGRESS',
+        time: 'Agora mesmo'
+      };
+
+      const sysLog: SystemLog = {
+        id: `log-prog-${Date.now()}`,
+        timestamp: timestampStr,
+        user: { name: userName, initials: userInitials, bgColor: 'bg-indigo-150', textColor: 'text-indigo-800' },
+        action: 'Progresso em Curso',
+        training: courseTitle,
+        ip: '192.168.1.189',
+        status: 'Sucesso'
+      };
+
+      setRecentActivities(prev => {
+        const next = [act, ...prev];
+        return Array.from(new Map(next.map(a => [a.id, a])).values());
+      });
+      setSystemLogs(prev => {
+        const next = [sysLog, ...prev];
+        return Array.from(new Map(next.map(l => [l.id, l])).values());
+      });
+
+      dbService.addActivity(act).catch(e => console.error(e));
+      dbService.addLog(sysLog).catch(e => console.error(e));
+    }
+
     // Sync active state inside reader player to prevent layout sync flicker
     setSelectedCourseForLesson((prev: any) => {
       if (prev && prev.id === courseId) {
@@ -619,7 +742,15 @@ export default function App() {
           />
         );
       case 'admin-reports':
-        return <ReportsView systemLogs={systemLogs} setSystemLogs={syncSetSystemLogs} />;
+        return (
+          <ReportsView
+            systemLogs={systemLogs}
+            setSystemLogs={syncSetSystemLogs}
+            recentActivities={recentActivities}
+            trainings={trainings}
+            users={users}
+          />
+        );
       case 'parameters':
         return <ParametersView currentUser={loggedInUser} dbConnected={dbConnected} />;
       case 'student-dashboard':
@@ -632,6 +763,7 @@ export default function App() {
             setAvailableCourses={setStudentAvailableCourses}
             onWatchLesson={handleWatchLesson}
             currentUser={loggedInUser}
+            onEnroll={handleEnrollCourse}
           />
         );
       case 'student-lesson':

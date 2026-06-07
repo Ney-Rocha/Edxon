@@ -20,6 +20,7 @@ interface StudentDashboardViewProps {
   setAvailableCourses: React.Dispatch<React.SetStateAction<any[]>>;
   onWatchLesson: (course: any) => void;
   currentUser: User | null;
+  onEnroll?: (course: any) => void;
 }
 
 export default function StudentDashboardView({
@@ -29,7 +30,8 @@ export default function StudentDashboardView({
   availableCourses,
   setAvailableCourses,
   onWatchLesson,
-  currentUser
+  currentUser,
+  onEnroll
  }: StudentDashboardViewProps) {
   // Enroll dynamic action
   const handleEnroll = (course: any) => {
@@ -46,6 +48,9 @@ export default function StudentDashboardView({
       },
       ...prev
     ]);
+    if (onEnroll) {
+      onEnroll(course);
+    }
   };
 
   const inProgressCount = activeCourses.filter((c) => c.progress < 100).length;
@@ -103,75 +108,83 @@ export default function StudentDashboardView({
           <span className="text-xs text-slate-400 font-semibold">Trilhas ativas</span>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {activeCourses.map((c) => (
-            <div
-              key={c.id}
-              className="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden hover:shadow-md transition duration-200 flex flex-col justify-between"
-            >
-              <div>
-                <div className="relative h-36 bg-slate-100">
-                  <img
-                    src={c.coverImage}
-                    alt={c.title}
-                    className="w-full h-full object-cover"
-                    referrerPolicy="no-referrer"
-                  />
-                  <span className="absolute top-3 left-3 bg-slate-900/80 text-white text-[10px] font-bold px-2 py-0.5 rounded-lg border border-white/14 backdrop-blur-sm">
-                    {c.progress}% Concluído
-                  </span>
-                </div>
+        {activeCourses.length === 0 ? (
+          <div className="py-12 px-6 text-center text-xs text-slate-400 border border-dashed border-slate-200 rounded-3xl bg-white/50 shadow-sm flex flex-col items-center justify-center gap-2">
+            <BookOpen className="h-8 w-8 text-slate-300 stroke-[1.5]" />
+            <p className="font-medium text-slate-500">Nenhum curso em andamento no momento</p>
+            <p className="text-[11px] text-slate-400 max-w-sm">Matricule-se em um dos treinamentos corporativos disponíveis no catálogo abaixo para iniciar seus estudos!</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {activeCourses.map((c) => (
+              <div
+                key={c.id}
+                className="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden hover:shadow-md transition duration-200 flex flex-col justify-between"
+              >
+                <div>
+                  <div className="relative h-36 bg-slate-100">
+                    <img
+                      src={c.coverImage}
+                      alt={c.title}
+                      className="w-full h-full object-cover"
+                      referrerPolicy="no-referrer"
+                    />
+                    <span className="absolute top-3 left-3 bg-slate-900/80 text-white text-[10px] font-bold px-2 py-0.5 rounded-lg border border-white/14 backdrop-blur-sm">
+                      {c.progress}% Concluído
+                    </span>
+                  </div>
 
-                <div className="p-5 space-y-4">
-                  <h4 className="font-bold text-sm text-slate-900 line-clamp-2 md:min-h-[40px]">
-                    {c.title}
-                  </h4>
+                  <div className="p-5 space-y-4">
+                    <h4 className="font-bold text-sm text-slate-900 line-clamp-2 md:min-h-[40px]">
+                      {c.title}
+                    </h4>
 
-                  {/* Pure HTML and Tailwind CSS Progress Indicator Bar */}
-                  <div className="space-y-1.5">
-                    <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
-                      <div
-                        className="bg-indigo-600 h-2 rounded-full transition-all duration-500"
-                        style={{ width: `${c.progress}%` }}
-                      />
+                    {/* Pure HTML and Tailwind CSS Progress Indicator Bar */}
+                    <div className="space-y-1.5">
+                      <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+                        <div
+                          className="bg-indigo-600 h-2 rounded-full transition-all duration-500"
+                          style={{ width: `${c.progress}%` }}
+                        />
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
 
-              {/* Special interactive CTA triggered if progress is over 60% */}
-              <div className="px-5 py-3.5 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
-                <span className="text-[10px] text-slate-400 font-bold flex items-center gap-1">
-                  <Calendar className="h-3 w-3" />
-                  Expira em 30 dias
-                </span>
+                {/* Special interactive CTA triggered if progress is over 60% */}
+                <div className="px-5 py-3.5 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
+                  <span className="text-[10px] text-slate-400 font-bold flex items-center gap-1">
+                    <Calendar className="h-3 w-3" />
+                    Expira em 30 dias
+                  </span>
 
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => onWatchLesson(c)}
-                    className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl border border-indigo-200 bg-indigo-50/50 hover:bg-indigo-100 text-indigo-700 text-[11px] font-bold transition-all"
-                  >
-                    <span>Assistir Aula</span>
-                    <Play className="h-3 w-3 fill-indigo-500 text-indigo-500 ml-0.5" />
-                  </button>
-
-                  {c.progress >= 60 && (
+                  <div className="flex gap-2">
                     <button
-                      onClick={() => {
-                        onWatchLesson(c);
-                        setView('student-quiz');
-                      }}
-                      className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-[11px] font-bold transition-all animate-pulse"
+                      onClick={() => onWatchLesson(c)}
+                      className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl border border-indigo-200 bg-indigo-50/50 hover:bg-indigo-100 text-indigo-700 text-[11px] font-bold transition-all"
                     >
-                      <span>Fazer Prova</span>
-                      <ArrowRight className="h-3 w-3" />
+                      <span>Assistir Aula</span>
+                      <Play className="h-3 w-3 fill-indigo-500 text-indigo-500 ml-0.5" />
                     </button>
-                  )}
+
+                    {c.progress >= 60 && (
+                      <button
+                        onClick={() => {
+                          onWatchLesson(c);
+                          setView('student-quiz');
+                        }}
+                        className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-[11px] font-bold transition-all animate-pulse"
+                      >
+                        <span>Fazer Prova</span>
+                        <ArrowRight className="h-3 w-3" />
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Grid: Available Courses to Enroll section */}
