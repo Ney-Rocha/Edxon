@@ -260,8 +260,23 @@ export default function App() {
   const loggedInUser = users.find(u => u.email.toLowerCase() === (currentUserEmail || '').toLowerCase()) || null;
 
   // Student States (Elevated for full navigation workflow and progress persistence)
-  const [studentActiveCourses, setStudentActiveCourses] = useState(STUDENT_ACTIVE_COURSES);
-  const [studentAvailableCourses, setStudentAvailableCourses] = useState(STUDENT_AVAILABLE_COURSES);
+  const [studentActiveCourses, setStudentActiveCourses] = useState(() => {
+    try {
+      const stored = localStorage.getItem(`edxon_student_active_courses_${currentUserEmail || 'guest'}`);
+      return stored ? JSON.parse(stored) : STUDENT_ACTIVE_COURSES;
+    } catch {
+      return STUDENT_ACTIVE_COURSES;
+    }
+  });
+
+  const [studentAvailableCourses, setStudentAvailableCourses] = useState(() => {
+    try {
+      const stored = localStorage.getItem(`edxon_student_available_courses_${currentUserEmail || 'guest'}`);
+      return stored ? JSON.parse(stored) : STUDENT_AVAILABLE_COURSES;
+    } catch {
+      return STUDENT_AVAILABLE_COURSES;
+    }
+  });
 
   // Authentication & Notifications state hooks
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -276,7 +291,7 @@ export default function App() {
     }
   });
 
-  // Sync loaded read states on email change
+  // Sync loaded states on email change
   useEffect(() => {
     if (currentUserEmail) {
       try {
@@ -285,8 +300,35 @@ export default function App() {
       } catch {
         setReadNotificationIds([]);
       }
+
+      try {
+        const storedActive = localStorage.getItem(`edxon_student_active_courses_${currentUserEmail}`);
+        setStudentActiveCourses(storedActive ? JSON.parse(storedActive) : STUDENT_ACTIVE_COURSES);
+
+        const storedAvailable = localStorage.getItem(`edxon_student_available_courses_${currentUserEmail}`);
+        setStudentAvailableCourses(storedAvailable ? JSON.parse(storedAvailable) : STUDENT_AVAILABLE_COURSES);
+      } catch {
+        setStudentActiveCourses(STUDENT_ACTIVE_COURSES);
+        setStudentAvailableCourses(STUDENT_AVAILABLE_COURSES);
+      }
+    } else {
+      setStudentActiveCourses(STUDENT_ACTIVE_COURSES);
+      setStudentAvailableCourses(STUDENT_AVAILABLE_COURSES);
     }
   }, [currentUserEmail]);
+
+  // Persist student progress and courses in localStorage on any change
+  useEffect(() => {
+    if (currentUserEmail) {
+      localStorage.setItem(`edxon_student_active_courses_${currentUserEmail}`, JSON.stringify(studentActiveCourses));
+    }
+  }, [studentActiveCourses, currentUserEmail]);
+
+  useEffect(() => {
+    if (currentUserEmail) {
+      localStorage.setItem(`edxon_student_available_courses_${currentUserEmail}`, JSON.stringify(studentAvailableCourses));
+    }
+  }, [studentAvailableCourses, currentUserEmail]);
 
   // Derived Dynamic Notifications fully from database resources (Courses, Activities, Progress)
   const notifications = useMemo(() => {

@@ -10,12 +10,33 @@ let supabaseDirect: SupabaseClient | null = null;
 let mode: 'proxy' | 'direct' | 'memory' = 'memory';
 
 // Safe, persistent in-memory fallbacks inside client memory
-let localUsers: User[] = [...INITIAL_USERS];
-let localTrainings: Training[] = [...INITIAL_TRAININGS];
-let localActivities: RecentActivity[] = [...INITIAL_ACTIVITIES];
-let localLogs: SystemLog[] = [...INITIAL_SYSTEM_LOGS];
-let localCourseTypes: CourseType[] = [...INITIAL_COURSE_TYPES];
-let localQuestions: Question[] = [...INITIAL_QUESTIONS];
+const isBrowser = typeof window !== 'undefined';
+
+function getStoredOrDefault<T>(key: string, defaultValue: T): T {
+  if (!isBrowser) return defaultValue;
+  try {
+    const val = localStorage.getItem(key);
+    return val ? JSON.parse(val) : defaultValue;
+  } catch {
+    return defaultValue;
+  }
+}
+
+function setStoredValue<T>(key: string, value: T): void {
+  if (!isBrowser) return;
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+  } catch (e) {
+    console.error("[DatabaseService] localStorage error:", e);
+  }
+}
+
+let localUsers: User[] = getStoredOrDefault("edxon_local_users", [...INITIAL_USERS]);
+let localTrainings: Training[] = getStoredOrDefault("edxon_local_trainings", [...INITIAL_TRAININGS]);
+let localActivities: RecentActivity[] = getStoredOrDefault("edxon_local_activities", [...INITIAL_ACTIVITIES]);
+let localLogs: SystemLog[] = getStoredOrDefault("edxon_local_logs", [...INITIAL_SYSTEM_LOGS]);
+let localCourseTypes: CourseType[] = getStoredOrDefault("edxon_local_course_types", [...INITIAL_COURSE_TYPES]);
+let localQuestions: Question[] = getStoredOrDefault("edxon_local_questions", [...INITIAL_QUESTIONS]);
 
 if (URL && KEY && URL !== "" && KEY !== "") {
   try {
@@ -152,12 +173,14 @@ export async function getUsers(): Promise<User[]> {
       if (error) throw error;
       if (data && data.length > 0) {
         localUsers = data.map(mapDbUserToClient);
+        setStoredValue("edxon_local_users", localUsers);
         return localUsers;
       }
       // Seed table
       for (const u of localUsers) {
         await tryUpsertUserWithFallback(supabaseDirect, mapClientUserToDb(u));
       }
+      setStoredValue("edxon_local_users", localUsers);
       return localUsers;
     } catch (e) {
       console.error("[DatabaseService] Direct getUsers error:", e);
@@ -172,6 +195,7 @@ export async function upsertUser(user: User): Promise<User> {
   const idx = localUsers.findIndex(u => u.id === user.id);
   if (idx > -1) localUsers[idx] = user;
   else localUsers.unshift(user);
+  setStoredValue("edxon_local_users", localUsers);
 
   if (mode === 'proxy') {
     return fetch("/api/db/users", {
@@ -193,6 +217,7 @@ export async function upsertUser(user: User): Promise<User> {
 
 export async function deleteUser(id: string): Promise<boolean> {
   localUsers = localUsers.filter(u => u.id !== id);
+  setStoredValue("edxon_local_users", localUsers);
 
   if (mode === 'proxy') {
     return fetch(`/api/db/users/${id}`, { method: "DELETE" }).then(r => r.json().then(d => !!d.success));
@@ -235,26 +260,37 @@ export async function getTrainings(): Promise<Training[]> {
           pdfUrl: d.pdf_url || d.pdfUrl,
           courseTypeId: d.tipo_curso_id || d.course_type_id || d.courseTypeId
         })) as Training[];
+        setStoredValue("edxon_local_trainings", localTrainings);
         return localTrainings;
       }
-      // Seed table
-      for (const t of localTrainings) {
-        await supabaseDirect.from("trainings").upsert({
-          id: t.id,
-          title: t.title,
-          category: t.category,
-          duration: t.duration,
-          views_count: t.viewsCount,
-          type: t.type,
-          status: t.status,
-          cover_image: t.coverImage,
-          updated_date: t.updatedDate,
-          description: t.description,
-          pdf_url: t.pdfUrl,
-          tipo_curso_id: t.courseTypeId
-        });
+      
+      // Prevent blind re-seeding if the database was intentionally emptied: 
+      // Only seed courses automatically if the users table is also completely empty.
+      const { data: userData } = await supabaseDirect.from("users").select("id").limit(1);
+      const hasUserData = userData && userData.length > 0;
+      
+      if (!hasUserData) {
+        // Seed table
+        for (const t of localTrainings) {
+          await supabaseDirect.from("trainings").upsert({
+            id: t.id,
+            title: t.title,
+            category: t.category,
+            duration: t.duration,
+            views_count: t.viewsCount,
+            type: t.type,
+            status: t.status,
+            cover_image: t.coverImage,
+            updated_date: t.updatedDate,
+            description: t.description,
+            pdf_url: t.pdfUrl,
+            tipo_curso_id: t.courseTypeId
+          });
+        }
+        setStoredValue("edxon_local_trainings", localTrainings);
+        return localTrainings;
       }
-      return localTrainings;
+      return [];
     } catch (e) {
       console.error("[DatabaseService] Direct getTrainings failed:", e);
       return localTrainings;
@@ -268,6 +304,7 @@ export async function upsertTraining(training: Training): Promise<Training> {
   const idx = localTrainings.findIndex(t => t.id === training.id);
   if (idx > -1) localTrainings[idx] = training;
   else localTrainings.unshift(training);
+  setStoredValue("edxon_local_trainings", localTrainings);
 
   if (mode === 'proxy') {
     return fetch("/api/db/trainings", {
@@ -310,6 +347,7 @@ export async function upsertTraining(training: Training): Promise<Training> {
 
 export async function deleteTraining(id: string): Promise<boolean> {
   localTrainings = localTrainings.filter(t => t.id !== id);
+  setStoredValue("edxon_local_trainings", localTrainings);
 
   if (mode === 'proxy') {
     return fetch(`/api/db/trainings/${id}`, { method: "DELETE" }).then(r => r.json().then(d => !!d.success));
@@ -351,6 +389,7 @@ export async function getActivities(): Promise<RecentActivity[]> {
           status: d.status,
           time: d.time,
         })) as RecentActivity[];
+        setStoredValue("edxon_local_activities", localActivities);
         return localActivities;
       }
       for (const act of localActivities) {
@@ -363,6 +402,7 @@ export async function getActivities(): Promise<RecentActivity[]> {
           time: act.time,
         });
       }
+      setStoredValue("edxon_local_activities", localActivities);
       return localActivities;
     } catch (e) {
       console.error("[DatabaseService] Direct getActivities failed:", e);
@@ -376,6 +416,7 @@ export async function getActivities(): Promise<RecentActivity[]> {
 export async function addActivity(act: RecentActivity): Promise<RecentActivity> {
   localActivities.unshift(act);
   if (localActivities.length > 30) localActivities.pop();
+  setStoredValue("edxon_local_activities", localActivities);
 
   if (mode === 'proxy') {
     return fetch("/api/db/activities", {
@@ -429,6 +470,7 @@ export async function getLogs(): Promise<SystemLog[]> {
           ip: d.ip,
           status: d.status,
         })) as SystemLog[];
+        setStoredValue("edxon_local_logs", localLogs);
         return localLogs;
       }
       for (const log of localLogs) {
@@ -445,6 +487,7 @@ export async function getLogs(): Promise<SystemLog[]> {
           status: log.status,
         });
       }
+      setStoredValue("edxon_local_logs", localLogs);
       return localLogs;
     } catch (e) {
       console.error("[DatabaseService] Direct getLogs failed:", e);
@@ -458,6 +501,7 @@ export async function getLogs(): Promise<SystemLog[]> {
 export async function addLog(log: SystemLog): Promise<SystemLog> {
   localLogs.unshift(log);
   if (localLogs.length > 40) localLogs.pop();
+  setStoredValue("edxon_local_logs", localLogs);
 
   if (mode === 'proxy') {
     return fetch("/api/db/logs", {
@@ -727,6 +771,15 @@ export async function resetDatabase(): Promise<{ success: boolean; message: stri
   localLogs = [];
   localCourseTypes = [...INITIAL_COURSE_TYPES];
   localQuestions = [...INITIAL_QUESTIONS];
+
+  if (isBrowser) {
+    localStorage.removeItem("edxon_local_users");
+    localStorage.removeItem("edxon_local_trainings");
+    localStorage.removeItem("edxon_local_activities");
+    localStorage.removeItem("edxon_local_logs");
+    localStorage.removeItem("edxon_local_course_types");
+    localStorage.removeItem("edxon_local_questions");
+  }
 
   if (mode === 'proxy') {
     return fetch("/api/db/reset", { method: "POST" }).then(r => r.json());

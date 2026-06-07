@@ -267,25 +267,31 @@ export async function getTrainings(): Promise<Training[]> {
         courseTypeId: d.tipo_curso_id || d.course_type_id || d.courseTypeId
       })) as Training[];
     }
-    // Seed trainings table if empty
-    for (const t of localTrainings) {
-      const { error: insertErr } = await client.from("trainings").upsert({
-        id: t.id,
-        title: t.title,
-        category: t.category,
-        duration: t.duration,
-        views_count: t.viewsCount,
-        type: t.type,
-        status: t.status,
-        cover_image: t.coverImage,
-        updated_date: t.updatedDate,
-        description: t.description,
-        pdf_url: t.pdfUrl,
-        tipo_curso_id: t.courseTypeId
-      });
-      if (insertErr) handleAndLogDbError("seed-training", insertErr);
+    // Seed trainings table if empty only if users table is also completely empty (suggests first-time boot)
+    const { data: userData } = await client.from("users").select("id").limit(1);
+    const hasUsers = userData && userData.length > 0;
+
+    if (!hasUsers) {
+      for (const t of localTrainings) {
+        const { error: insertErr } = await client.from("trainings").upsert({
+          id: t.id,
+          title: t.title,
+          category: t.category,
+          duration: t.duration,
+          views_count: t.viewsCount,
+          type: t.type,
+          status: t.status,
+          cover_image: t.coverImage,
+          updated_date: t.updatedDate,
+          description: t.description,
+          pdf_url: t.pdfUrl,
+          tipo_curso_id: t.courseTypeId
+        });
+        if (insertErr) handleAndLogDbError("seed-training", insertErr);
+      }
+      return localTrainings;
     }
-    return localTrainings;
+    return [];
   } catch (err) {
     handleAndLogDbError("getTrainings", err);
     return localTrainings;
