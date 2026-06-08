@@ -1029,6 +1029,7 @@ export default function App() {
           <DashboardView
             trainings={trainings}
             recentActivities={recentActivities}
+            systemLogs={systemLogs}
             users={users}
             setView={setView}
           />

@@ -10,12 +10,13 @@ import {
   Search,
   BookOpen
 } from 'lucide-react';
-import { Training, RecentActivity, User } from '../types';
+import { Training, RecentActivity, User, SystemLog } from '../types';
 import { UI_IMAGES } from '../data';
 
 interface DashboardViewProps {
   trainings: Training[];
   recentActivities: RecentActivity[];
+  systemLogs?: SystemLog[];
   users: User[];
   setView: (view: any) => void;
 }
@@ -23,6 +24,7 @@ interface DashboardViewProps {
 export default function DashboardView({
   trainings,
   recentActivities,
+  systemLogs = [],
   users,
   setView
 }: DashboardViewProps) {
@@ -45,29 +47,40 @@ export default function DashboardView({
   // Dynamic growth percentage purely calculated based on total courses size (just to look dynamic and logical)
   const viewGrowth = 8.2 + (trainings.length % 4) * 1.5;
 
-  // Calculando Aproveitamento global dinamicamente
-  let averageSuccess = 88.5; // Valor de baseline padrão
-  const completionLogs = recentActivities.filter(
-    (act) => act.action.toLowerCase().includes('prova') || act.action.toLowerCase().includes('quiz') || act.action.toLowerCase().includes('concluiu')
-  );
+  // Calculando Aproveitamento global dinamicamente de acordo com as informações reais no banco
+  let averageSuccess = 0;
+  let scoreSum = 0;
+  let evaluationsCount = 0;
 
-  if (completionLogs.length > 0) {
-    let parsedSum = 0;
-    let count = 0;
-    completionLogs.forEach(act => {
-      const match = act.action.match(/(\d+)%/);
+  // Analisar atividades reais que contêm notas/acertos
+  recentActivities.forEach((act) => {
+    if (
+      act.action.toLowerCase().includes('avaliação') || 
+      act.action.toLowerCase().includes('quiz') || 
+      act.action.toLowerCase().includes('prova') ||
+      act.action.toLowerCase().includes('desempenho')
+    ) {
+      const match = act.action.match(/(\d+)\s*%/);
       if (match) {
-        parsedSum += parseInt(match[1], 10);
-        count++;
+        scoreSum += parseInt(match[1], 10);
+        evaluationsCount++;
       }
-    });
-    if (count > 0) {
-      averageSuccess = Math.round((parsedSum / count) * 10) / 10;
     }
-  } else {
-    // Caso não tenha logs de porcentagens explícitas na memória atual, simulamos uma flutuação lógica baseada nos treinamentos/usuários cadastrados
-    const dataSeed = (trainings.length * 3 + users.length * 7) % 15;
-    averageSuccess = 82.5 + dataSeed;
+  });
+
+  // Analisar logs do sistema adicionais
+  systemLogs.forEach((log) => {
+    if (log.action === 'Avaliação Realizada' || log.action.toLowerCase().includes('avaliação')) {
+      const match = log.training.match(/(\d+)\s*%/);
+      if (match) {
+        scoreSum += parseInt(match[1], 10);
+        evaluationsCount++;
+      }
+    }
+  });
+
+  if (evaluationsCount > 0) {
+    averageSuccess = Math.round((scoreSum / evaluationsCount) * 10) / 10;
   }
 
   // Sort trainings so that newer ones appear first (Últimos Cursos Criados)

@@ -59,6 +59,107 @@ export default function ReportsView({
     return matchesSearch && matchesStatus;
   });
 
+  // ================= DYNAMIC CALCULATIONS FOR CHARTS =================
+
+  // 1. Acessos Mensais Individuais (baseados nos systemLogs reais)
+  const monthsAbbr = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+  const today = new Date();
+  const last6Months: { name: string; index: number; count: number }[] = [];
+
+  for (let i = 5; i >= 0; i--) {
+    const d = new Date(today.getFullYear(), today.getMonth() - i, 1);
+    last6Months.push({
+      name: monthsAbbr[d.getMonth()] + (i === 0 ? ' (Hoje)' : ''),
+      index: d.getMonth(),
+      count: 0
+    });
+  }
+
+  systemLogs.forEach((log) => {
+    if (log.timestamp) {
+      // Tentar split padrão pt-BR: 'DD/MM/YYYY HH:MM:SS'
+      const parts = log.timestamp.split('/');
+      if (parts.length >= 2) {
+        const monthVal = parseInt(parts[1], 10) - 1; // 0-Indexed
+        const matchIdx = last6Months.findIndex((m) => m.index === monthVal);
+        if (matchIdx !== -1) {
+          last6Months[matchIdx].count++;
+        }
+      } else {
+        const d = new Date(log.timestamp);
+        if (!isNaN(d.getTime())) {
+          const matchIdx = last6Months.findIndex((m) => m.index === d.getMonth());
+          if (matchIdx !== -1) {
+            last6Months[matchIdx].count++;
+          }
+        }
+      }
+    }
+  });
+
+  const maxLogsValue = Math.max(...last6Months.map((m) => m.count), 5);
+
+  // 2. Inscrições e Cadastros por Categoria (baseado em treinamentos + matrículas)
+  const courseToCategoryMap: Record<string, string> = {};
+  trainings.forEach((t) => {
+    courseToCategoryMap[t.title] = t.category;
+  });
+
+  const categoryCounts: Record<string, { count: number; label: string }> = {};
+
+  // Inicializar categorias com os ementários que existem em trainings
+  trainings.forEach((course) => {
+    if (course.category && !categoryCounts[course.category]) {
+      categoryCounts[course.category] = { count: 0, label: course.category };
+    }
+  });
+
+  const defaultCategories = ['Integração', 'Segurança', 'Procedimentos', 'Liderança'];
+  defaultCategories.forEach((cat) => {
+    if (!categoryCounts[cat]) {
+      categoryCounts[cat] = { count: 0, label: cat };
+    }
+  });
+
+  // Contabilizar matrículas reais
+  systemLogs.forEach((log) => {
+    if (log.action === 'Matrícula em Curso') {
+      const courseTitle = log.training;
+      const catOfCourse = courseToCategoryMap[courseTitle];
+      if (catOfCourse && categoryCounts[catOfCourse]) {
+        categoryCounts[catOfCourse].count++;
+      } else {
+        const lowerTitle = courseTitle.toLowerCase();
+        let guessedCat = '';
+        if (lowerTitle.includes('lider') || lowerTitle.includes('gestão') || lowerTitle.includes('comportamental')) {
+          guessedCat = 'Liderança';
+        } else if (lowerTitle.includes('integra') || lowerTitle.includes('boas') || lowerTitle.includes('empresa')) {
+          guessedCat = 'Integração';
+        } else if (lowerTitle.includes('seguran') || lowerTitle.includes('normas') || lowerTitle.includes('cipa')) {
+          guessedCat = 'Segurança';
+        } else if (lowerTitle.includes('process') || lowerTitle.includes('manual') || lowerTitle.includes('procedimento')) {
+          guessedCat = 'Procedimentos';
+        }
+        if (guessedCat && categoryCounts[guessedCat]) {
+          categoryCounts[guessedCat].count++;
+        }
+      }
+    }
+  });
+
+  const totalRegistrations = Object.values(categoryCounts).reduce((sum, item) => sum + item.count, 0);
+
+  const finalCategoriesData = Object.values(categoryCounts).map((item) => {
+    const percent = totalRegistrations > 0 ? Math.round((item.count / totalRegistrations) * 100) : 0;
+    return {
+      label: item.label,
+      count: item.count,
+      percent: percent
+    };
+  }).sort((a, b) => b.count - a.count);
+
+  const categoryColors = ['bg-indigo-650', 'bg-emerald-500', 'bg-amber-500', 'bg-rose-500', 'bg-sky-500', 'bg-purple-500'];
+
   // Export Audit logs list as CSV file (Real client browser direct download)
   const handleExportAuditLogsCSV = () => {
     if (filteredLogs.length === 0) {
@@ -132,26 +233,10 @@ export default function ReportsView({
         if (parsed) {
           progress = parseInt(parsed[1], 10);
         } else {
-          // Preset seed progress to look pristine on fresh default mock accounts
-          if (u.email.toLowerCase() === 'bruno.santos@educorp.com') progress = 85;
-          else if (u.email.toLowerCase() === 'carla.dias@educorp.com') progress = 45;
-          else progress = 20;
+          progress = 20;
         }
         const lastEv = userLogs[0] || matchActivities[0];
         lastActivityDate = lastEv ? (userLogs[0]?.timestamp || 'Hoje') : 'Hoje';
-      } else {
-        // Core seed compatibility for standard corporate demo students
-        if (courseTitle.includes('Liderança')) {
-          if (u.name.includes('Bruno') || u.email.includes('bruno')) {
-            progress = 85;
-            status = 'Em Andamento';
-            lastActivityDate = '06 Jun 2026';
-          } else if (u.name.includes('Carla') || u.email.includes('carla')) {
-            progress = 100;
-            status = 'Concluído';
-            lastActivityDate = '05 Jun 2026';
-          }
-        }
       }
 
       return {
@@ -303,29 +388,36 @@ export default function ReportsView({
                   <line x1="30" y1="80" x2="480" y2="80" stroke="#f1f5f9" strokeWidth="1" strokeDasharray="3,3" />
                   <line x1="30" y1="40" x2="480" y2="40" stroke="#f1f5f9" strokeWidth="1" strokeDasharray="3,3" />
 
-                  {/* Graphical Bars */}
-                  <rect x="50" y="80" width="30" height="40" rx="3" fill="#cbd5e1" />
-                  <rect x="130" y="50" width="30" height="70" rx="3" fill="#cbd5e1" />
-                  <rect x="210" y="30" width="30" height="90" rx="3" fill="#cbd5e1" />
-                  <rect x="290" y="20" width="30" height="100" rx="3" fill="#4f46e5" />
-                  <rect x="370" y="45" width="30" height="75" rx="3" fill="#4f46e5" />
-                  <rect x="450" y="35" width="30" height="85" rx="3" fill="#3b82f6" />
-
-                  {/* Axis Label details */}
-                  <text x="65" y="140" fill="#94a3b8" fontSize="10" textAnchor="middle" fontWeight="bold">Jul</text>
-                  <text x="145" y="140" fill="#94a3b8" fontSize="10" textAnchor="middle" fontWeight="bold">Ago</text>
-                  <text x="225" y="140" fill="#94a3b8" fontSize="10" textAnchor="middle" fontWeight="bold">Set</text>
-                  <text x="305" y="140" fill="#4f46e5" fontSize="10" textAnchor="middle" fontWeight="bold">Out (Hoje)</text>
-                  <text x="385" y="140" fill="#94a3b8" fontSize="10" textAnchor="middle" fontWeight="bold">Nov</text>
-                  <text x="465" y="140" fill="#94a3b8" fontSize="10" textAnchor="middle" fontWeight="bold">Dez</text>
-
-                  {/* Bar value label text markers */}
-                  <text x="65" y="72" fill="#64748b" fontSize="9" textAnchor="middle" fontWeight="bold">1.2k</text>
-                  <text x="145" y="42" fill="#64748b" fontSize="9" textAnchor="middle" fontWeight="bold">2.4k</text>
-                  <text x="225" y="22" fill="#64748b" fontSize="9" textAnchor="middle" fontWeight="bold">3.8k</text>
-                  <text x="305" y="12" fill="#4f46e5" fontSize="9" textAnchor="middle" fontWeight="black">5.1k</text>
-                  <text x="385" y="37" fill="#6a7280" fontSize="9" textAnchor="middle" fontWeight="bold">3.0k</text>
-                  <text x="465" y="27" fill="#3b82f6" fontSize="9" textAnchor="middle" fontWeight="bold">4.2k</text>
+                  {/* Graphical Bars dynamically computed */}
+                  {last6Months.map((m, idx) => {
+                    const xRect = 50 + idx * 80;
+                    const xText = 65 + idx * 80;
+                    const barHeight = Math.max((m.count / maxLogsValue) * 100, 3); // minimum visual height of 3
+                    const yRect = 120 - barHeight;
+                    const isTodayMonth = idx === 5; // The last index is "Hoje"
+                    const fillClr = isTodayMonth ? '#4f46e5' : '#cbd5e1';
+                    const valStr = m.count >= 1000 ? `${(m.count / 1000).toFixed(1)}k` : `${m.count}`;
+                    
+                    return (
+                      <g key={idx}>
+                        <rect 
+                          x={xRect} 
+                          y={yRect} 
+                          width="30" 
+                          height={barHeight} 
+                          rx="3" 
+                          fill={fillClr}
+                          className="transition-all duration-300"
+                        />
+                        <text x={xText} y="140" fill={isTodayMonth ? '#4f46e5' : '#94a3b8'} fontSize="10" textAnchor="middle" fontWeight="bold">
+                          {m.name}
+                        </text>
+                        <text x={xText} y={Math.max(yRect - 8, 12)} fill={isTodayMonth ? '#4f46e5' : '#64748b'} fontSize="9" textAnchor="middle" fontWeight={isTodayMonth ? 'black' : 'bold'}>
+                          {valStr}
+                        </text>
+                      </g>
+                    );
+                  })}
                 </svg>
               </div>
             </div>
@@ -338,21 +430,20 @@ export default function ReportsView({
               </div>
 
               <div className="space-y-3.5 pt-2">
-                {[
-                  { label: 'Leadership / Gestão Geral', count: 324, percent: 74, color: 'bg-indigo-600' },
-                  { label: 'Soft Skills / Comunicação', count: 185, percent: 52, color: 'bg-emerald-500' },
-                  { label: 'Compliance & Regulatórios', count: 92, percent: 28, color: 'bg-amber-500' }
-                ].map((cat, idx) => (
-                  <div key={idx} className="space-y-1">
-                    <div className="flex items-center justify-between text-xs font-bold">
-                      <span className="text-slate-700">{cat.label}</span>
-                      <span className="text-slate-400">{cat.count} alunos ({cat.percent}%)</span>
+                {finalCategoriesData.map((cat, idx) => {
+                  const colorClass = categoryColors[idx % categoryColors.length];
+                  return (
+                    <div key={idx} className="space-y-1">
+                      <div className="flex items-center justify-between text-xs font-bold">
+                        <span className="text-slate-700">{cat.label}</span>
+                        <span className="text-slate-400">{cat.count} {cat.count === 1 ? 'aluno' : 'alunos'} ({cat.percent}%)</span>
+                      </div>
+                      <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+                        <div className={`${colorClass} h-2 rounded-full`} style={{ width: `${cat.percent}%` }} />
+                      </div>
                     </div>
-                    <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
-                      <div className={`${cat.color} h-2 rounded-full`} style={{ width: `${cat.percent}%` }} />
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           </div>
