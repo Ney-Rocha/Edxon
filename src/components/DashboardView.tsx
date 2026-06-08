@@ -92,10 +92,6 @@ export default function DashboardView({
           <h2 className="text-2xl font-bold text-slate-950 tracking-tight">Visão Geral do Sistema</h2>
           <p className="text-sm text-slate-500">Acompanhe métricas, acessos e criações de cursos em tempo real.</p>
         </div>
-        <div className="text-xs bg-indigo-50 border border-indigo-100 text-indigo-700 px-3 py-1.5 rounded-full font-medium flex items-center gap-1.5 self-start">
-          <span className="h-1.5 w-1.5 rounded-full bg-indigo-600 animate-pulse" />
-          Servidor Conectado
-        </div>
       </div>
 
       {/* Metric Cards Grid */}

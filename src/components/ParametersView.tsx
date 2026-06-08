@@ -33,6 +33,10 @@ export default function ParametersView({ currentUser, dbConnected, onResetDb, is
             Configure as chaves operacionais e propriedades corporativas do seu ecossistema LMS.
           </p>
         </div>
+        <div className="text-xs bg-indigo-50 border border-indigo-100 text-indigo-700 px-3 py-1.5 rounded-full font-medium flex items-center gap-1.5 self-start sm:self-center">
+          <span className="h-1.5 w-1.5 rounded-full bg-indigo-600 animate-pulse" />
+          Servidor Conectado
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
