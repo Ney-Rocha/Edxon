@@ -84,10 +84,7 @@ export default function DashboardView({
   }
 
   // Sort trainings so that newer ones appear first (Últimos Cursos Criados)
-  // New courses have IDs like t170... which are lexicographically larger than t1
   const sortedTrainings = [...trainings].sort((a, b) => {
-    if (a.id === 't1') return 1;
-    if (b.id === 't1') return -1;
     return b.id.localeCompare(a.id);
   });
 

@@ -723,9 +723,9 @@ export async function resetDatabase(): Promise<{ success: boolean; message: stri
       } catch (e) {
         console.log("No extra evaluation tables found on reset.");
       }
-      // Clear trainings except training 't1'
-      await client.from("trainings").delete().neq("id", "t1");
-      return { success: true, message: "Banco de dados sincronizado e limpo; mantido apenas admin e 1 treinamento." };
+      // Clear trainings completely (deleting 't1' as well)
+      await client.from("trainings").delete().neq("id", "none_to_match_all");
+      return { success: true, message: "Banco de dados sincronizado e limpo com sucesso." };
     } catch (err: any) {
       handleAndLogDbError("resetDatabase", err);
       return { success: false, message: "Erro ao resetar Supabase, mas memória foi limpa: " + err.message };

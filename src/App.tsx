@@ -461,7 +461,8 @@ export default function App() {
   const [studentActiveCourses, setStudentActiveCourses] = useState(() => {
     try {
       const stored = localStorage.getItem(`edxon_student_active_courses_${currentUserEmail || 'guest'}`);
-      return stored ? JSON.parse(stored) : STUDENT_ACTIVE_COURSES;
+      const parsed = stored ? JSON.parse(stored) : STUDENT_ACTIVE_COURSES;
+      return Array.isArray(parsed) ? parsed.filter((c: any) => c.title !== 'Liderança em Tempos de Crise' && c.title !== 'Liderança em tempos de crise') : [];
     } catch {
       return STUDENT_ACTIVE_COURSES;
     }
@@ -470,7 +471,8 @@ export default function App() {
   const [studentAvailableCourses, setStudentAvailableCourses] = useState(() => {
     try {
       const stored = localStorage.getItem(`edxon_student_available_courses_${currentUserEmail || 'guest'}`);
-      return stored ? JSON.parse(stored) : STUDENT_AVAILABLE_COURSES;
+      const parsed = stored ? JSON.parse(stored) : STUDENT_AVAILABLE_COURSES;
+      return Array.isArray(parsed) ? parsed.filter((c: any) => c.title !== 'Liderança em Tempos de Crise' && c.title !== 'Liderança em tempos de crise') : [];
     } catch {
       return STUDENT_AVAILABLE_COURSES;
     }
@@ -501,10 +503,12 @@ export default function App() {
 
       try {
         const storedActive = localStorage.getItem(`edxon_student_active_courses_${currentUserEmail}`);
-        setStudentActiveCourses(storedActive ? JSON.parse(storedActive) : STUDENT_ACTIVE_COURSES);
+        const parsedActive = storedActive ? JSON.parse(storedActive) : STUDENT_ACTIVE_COURSES;
+        setStudentActiveCourses(Array.isArray(parsedActive) ? parsedActive.filter((c: any) => c.title !== 'Liderança em Tempos de Crise' && c.title !== 'Liderança em tempos de crise') : []);
 
         const storedAvailable = localStorage.getItem(`edxon_student_available_courses_${currentUserEmail}`);
-        setStudentAvailableCourses(storedAvailable ? JSON.parse(storedAvailable) : STUDENT_AVAILABLE_COURSES);
+        const parsedAvailable = storedAvailable ? JSON.parse(storedAvailable) : STUDENT_AVAILABLE_COURSES;
+        setStudentAvailableCourses(Array.isArray(parsedAvailable) ? parsedAvailable.filter((c: any) => c.title !== 'Liderança em Tempos de Crise' && c.title !== 'Liderança em tempos de crise') : []);
       } catch {
         setStudentActiveCourses(STUDENT_ACTIVE_COURSES);
         setStudentAvailableCourses(STUDENT_AVAILABLE_COURSES);
@@ -528,128 +532,111 @@ export default function App() {
     }
   }, [studentAvailableCourses, currentUserEmail]);
 
-  // Derived Dynamic Notifications fully from database resources (Courses, Activities, Progress)
+  // Derived Dynamic Notifications fully from database resources (Courses, Activities, Progress, and logs)
   const notifications = useMemo(() => {
     const list: any[] = [];
-    const isAdmin = currentRole === 'admin';
+    if (!loggedInUser) return [];
 
-    // 1. Course Publication & drafts checking
+    // 1. Personalized User Registration (Cadastro)
+    list.push({
+      id: `welcome-personal-${loggedInUser.id}`,
+      title: 'Cadastro Realizado',
+      description: `Sua conta corporativa do EDXOn para "${loggedInUser.name}" (${loggedInUser.role === 'admin' ? 'Administrador' : 'Aluno'}) foi criada e ativada.`,
+      time: 'Cadastro',
+      isRead: readNotificationIds.includes(`welcome-personal-${loggedInUser.id}`),
+      type: 'success'
+    });
+
+    // 2. Personalized User Profile Updated (Cadastro Atualizado)
+    systemLogs.forEach((log) => {
+      if (log.action === 'Alteração de Usuário' && log.training.includes(loggedInUser.name)) {
+        list.push({
+          id: `profile-updated-${log.id}`,
+          title: 'Cadastro Atualizado',
+          description: `Seus dados cadastrais foram atualizados com sucesso no banco de dados.`,
+          time: log.timestamp || 'Recente',
+          isRead: readNotificationIds.includes(`profile-updated-${log.id}`),
+          type: 'success'
+        });
+      }
+    });
+
+    // 3. New Available Courses (Novo Curso Disponível)
     trainings.forEach((t) => {
       if (t.status === 'Publicado') {
-        if (!isAdmin) {
-          list.push({
-            id: `new-course-${t.id}`,
-            title: 'Novo Curso Disponível!',
-            description: `O treinamento de "${t.category}" intitulado "${t.title}" está disponível para matrícula no catálogo.`,
-            time: t.updatedDate || 'Recente',
-            isRead: readNotificationIds.includes(`new-course-${t.id}`),
-            type: 'course'
-          });
-        } else {
-          list.push({
-            id: `new-course-admin-${t.id}`,
-            title: 'Treinamento Ativo',
-            description: `O curso "${t.title}" está publicado e recebendo capacitações de alunos.`,
-            time: t.updatedDate || 'Recente',
-            isRead: readNotificationIds.includes(`new-course-admin-${t.id}`),
-            type: 'course'
-          });
-        }
-      } else if (t.status === 'Rascunho' && isAdmin) {
         list.push({
-          id: `draft-course-admin-${t.id}`,
-          title: 'Curso Pendente de Publicação',
-          description: `O curso de "${t.category}" está salvo em rascunho. Publique para liberar aos alunos.`,
-          time: t.updatedDate || 'Modificado',
-          isRead: readNotificationIds.includes(`draft-course-admin-${t.id}`),
-          type: 'alert'
+          id: `new-course-${t.id}`,
+          title: 'Novo Curso Disponível',
+          description: `O treinamento "${t.title}" foi publicado e está disponível para início imediato no catálogo.`,
+          time: t.updatedDate || 'Catálogo',
+          isRead: readNotificationIds.includes(`new-course-${t.id}`),
+          type: 'course'
         });
       }
     });
 
-    // 2. Quiz / Lesson completions from recentActivities logs
-    recentActivities.forEach((act) => {
-      const isCompleted = act.action.toLowerCase().includes('concluiu') || 
-                          act.action.toLowerCase().includes('completou') || 
-                          act.action.toLowerCase().includes('prova') || 
-                          act.action.toLowerCase().includes('finalizou');
-      
-      const isMyActivity = act.user?.email?.toLowerCase() === (currentUserEmail || '').toLowerCase() || 
-                           act.user?.name === loggedInUser?.name;
-
-      if (isAdmin) {
-        // Admin receives updates on general activity
+    // 4. Completed & Ongoing Courses of this user (Curso Concluído e Em Andamento)
+    studentActiveCourses.forEach((sac) => {
+      if (sac.progress === 100) {
         list.push({
-          id: `activity-${act.id}`,
-          title: isCompleted ? 'Capacitação Concluída' : 'Atividade do Aluno',
-          description: `${act.user?.name || 'Colaborador'}: ${act.action}`,
-          time: act.time || 'Recente',
-          isRead: readNotificationIds.includes(`activity-${act.id}`),
-          type: isCompleted ? 'success' : 'info'
+          id: `course-completed-${sac.id}`,
+          title: 'Curso Concluído 🎉',
+          description: `Parabéns! Você concluiu com êxito todas as aulas e exames da trilha "${sac.title}".`,
+          time: '100%',
+          isRead: readNotificationIds.includes(`course-completed-${sac.id}`),
+          type: 'success'
         });
       } else {
-        // Student sees their own completions or social accomplishments
-        if (isMyActivity) {
-          list.push({
-            id: `activity-${act.id}`,
-            title: isCompleted ? 'Avaliação Concluída!' : 'Atividade Pessoal',
-            description: `Você ${act.action.replace('Você e ', '').replace('Você ', '')}`,
-            time: act.time || 'Recente',
-            isRead: readNotificationIds.includes(`activity-${act.id}`),
-            type: isCompleted ? 'success' : 'info'
-          });
-        } else if (isCompleted) {
-          // Social proof notifications
-          list.push({
-            id: `activity-${act.id}`,
-            title: 'Colega Capacitado ⭐',
-            description: `${act.user?.name || 'Um colaborador'} concluiu com êxito: ${act.action.replace('Você e ', '').replace('Você ', '')}`,
-            time: act.time || 'Recente',
-            isRead: readNotificationIds.includes(`activity-${act.id}`),
-            type: 'success'
-          });
-        }
-      }
-    });
-
-    // 3. Operational Pendencies
-    if (!isAdmin) {
-      // If student has active courses with progress under 100%
-      studentActiveCourses.forEach((sac) => {
-        if (sac.progress < 100) {
-          list.push({
-            id: `student-pendency-${sac.id}`,
-            title: 'Curso Pendente',
-            description: `Complete seus estudos em "${sac.title}". Seu progresso atual é de ${sac.progress}%.`,
-            time: 'Ação requerida',
-            isRead: readNotificationIds.includes(`student-pendency-${sac.id}`),
-            type: 'alert'
-          });
-        }
-      });
-    } else {
-      // Admin global pendencies - check for empty descriptions or courses
-      const draftsCount = trainings.filter(t => t.status === 'Rascunho').length;
-      if (draftsCount > 0) {
         list.push({
-          id: `admin-drafts-summary`,
-          title: 'Revisão Necessária',
-          description: `Há ${draftsCount} treinamento(s) em rascunho pendentes de publicação formal no LMS.`,
-          time: 'Pendente',
-          isRead: readNotificationIds.includes(`admin-drafts-summary`),
+          id: `course-ongoing-${sac.id}`,
+          title: 'Treinamento Pendente',
+          description: `Continue seus estudos na trilha "${sac.title}". Seu progresso atual é de ${sac.progress}%.`,
+          time: `${sac.progress}%`,
+          isRead: readNotificationIds.includes(`course-ongoing-${sac.id}`),
           type: 'alert'
         });
       }
-    }
+    });
 
-    // Default system welcome is always present
-    list.push({
-      id: 'default-system-info',
-      title: 'Sistema EDXOn Ativo',
-      description: 'LMS Corporativo conectado de forma síncrona com o Supabase e pronto para capacitação.',
-      time: 'Diretriz',
-      isRead: readNotificationIds.includes('default-system-info'),
-      type: 'info'
+    // 5. User-specific real-time activities (Enrollments and Quizzes from database, excluding logins/accesses)
+    recentActivities.forEach((act) => {
+      const isMyActivity = act.user?.name === loggedInUser.name;
+      if (!isMyActivity) return;
+
+      const lowerAct = act.action.toLowerCase();
+      // Skip logins or system accesses
+      if (lowerAct.includes('login') || lowerAct.includes('sessão') || lowerAct.includes('acesso') || lowerAct.includes('entrou')) {
+        return;
+      }
+
+      if (lowerAct.includes('iniciou a trilha') || lowerAct.includes('matriculou')) {
+        list.push({
+          id: `enrollment-${act.id}`,
+          title: 'Matrícula Realizada',
+          description: act.action,
+          time: act.time || 'Recente',
+          isRead: readNotificationIds.includes(`enrollment-${act.id}`),
+          type: 'info'
+        });
+      } else if (lowerAct.includes('realizou a avaliação') || lowerAct.includes('desempenho obtido') || lowerAct.includes('avaliação')) {
+        list.push({
+          id: `eval-${act.id}`,
+          title: 'Avaliação Realizada',
+          description: act.action,
+          time: act.time || 'Recente',
+          isRead: readNotificationIds.includes(`eval-${act.id}`),
+          type: 'success'
+        });
+      } else if (lowerAct.includes('concluiu')) {
+        list.push({
+          id: `activity-comp-${act.id}`,
+          title: 'Treinamento Finalizado',
+          description: act.action,
+          time: act.time || 'Recente',
+          isRead: readNotificationIds.includes(`activity-comp-${act.id}`),
+          type: 'success'
+        });
+      }
     });
 
     // Deduplicate by ID
@@ -662,7 +649,7 @@ export default function App() {
       }
       return 0;
     });
-  }, [trainings, recentActivities, studentActiveCourses, currentRole, currentUserEmail, readNotificationIds, loggedInUser]);
+  }, [trainings, recentActivities, systemLogs, studentActiveCourses, readNotificationIds, loggedInUser]);
 
   const handleMarkAllAsRead = () => {
     const allIds = notifications.map((n) => n.id);

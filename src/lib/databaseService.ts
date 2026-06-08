@@ -795,11 +795,11 @@ export async function resetDatabase(): Promise<{ success: boolean; message: stri
       } catch (e) {
         console.log("No extra evaluation tables found on direct reset.");
       }
-      await supabaseDirect.from("trainings").delete().neq("id", "t1");
-      return { success: true, message: "Banco de dados sincronizado e limpo; mantido apenas admin e 1 treinamento." };
+      await supabaseDirect.from("trainings").delete().neq("id", "none_to_match_all");
+      return { success: true, message: "Banco de dados sincronizado e limpo com sucesso." };
     } catch (e: any) {
       return { success: false, message: "Erro ao resetar Supabase, mas memória foi limpa: " + e.message };
     }
   }
-  return { success: true, message: "Modo In-Memory limpo e restaurado; mantido apenas admin e 1 treinamento." };
+  return { success: true, message: "Modo In-Memory limpo e restaurado com sucesso." };
 }
