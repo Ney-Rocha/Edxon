@@ -12,7 +12,8 @@ import {
   CheckCircle,
   Info,
   Database,
-  RefreshCw
+  RefreshCw,
+  X
 } from 'lucide-react';
 import { ViewType, Role, User, Training, RecentActivity, SystemLog } from './types';
 import {
@@ -491,6 +492,16 @@ export default function App() {
     }
   });
 
+  // Persistent tracking of closed/dismissed notifications to avoid accumulation
+  const [dismissedNotificationIds, setDismissedNotificationIds] = useState<string[]>(() => {
+    try {
+      const raw = localStorage.getItem(`edxon_dismissed_notifications_${currentUserEmail || 'guest'}`);
+      return raw ? JSON.parse(raw) : [];
+    } catch {
+      return [];
+    }
+  });
+
   // Sync loaded states on email change
   useEffect(() => {
     if (currentUserEmail) {
@@ -499,6 +510,13 @@ export default function App() {
         setReadNotificationIds(raw ? JSON.parse(raw) : []);
       } catch {
         setReadNotificationIds([]);
+      }
+
+      try {
+        const rawDismissed = localStorage.getItem(`edxon_dismissed_notifications_${currentUserEmail}`);
+        setDismissedNotificationIds(rawDismissed ? JSON.parse(rawDismissed) : []);
+      } catch {
+        setDismissedNotificationIds([]);
       }
 
       try {
@@ -642,14 +660,30 @@ export default function App() {
     // Deduplicate by ID
     const unique = Array.from(new Map(list.map(n => [n.id, n])).values());
 
+    // Filter out dismissed of this session/email
+    const filtered = unique.filter((n) => !dismissedNotificationIds.includes(n.id));
+
     // Sort: unread first
-    return unique.sort((a, b) => {
+    return filtered.sort((a, b) => {
       if (a.isRead !== b.isRead) {
         return a.isRead ? 1 : -1;
       }
       return 0;
     });
-  }, [trainings, recentActivities, systemLogs, studentActiveCourses, readNotificationIds, loggedInUser]);
+  }, [trainings, recentActivities, systemLogs, studentActiveCourses, readNotificationIds, dismissedNotificationIds, loggedInUser]);
+
+  const handleDismissNotification = (id: string, e?: React.MouseEvent) => {
+    if (e) {
+      e.stopPropagation();
+    }
+    setDismissedNotificationIds((prev) => {
+      const next = prev.includes(id) ? prev : [...prev, id];
+      if (currentUserEmail) {
+        localStorage.setItem(`edxon_dismissed_notifications_${currentUserEmail}`, JSON.stringify(next));
+      }
+      return next;
+    });
+  };
 
   const handleMarkAllAsRead = () => {
     const allIds = notifications.map((n) => n.id);
@@ -1215,28 +1249,41 @@ export default function App() {
                           };
 
                           return (
-                            <button
+                            <div
                               key={n.id}
-                              onClick={() => handleToggleReadStatus(n.id)}
-                              className={`w-full p-3.5 flex items-start gap-3 text-left transition hover:bg-slate-50/60 ${
+                              className={`w-full p-3.5 flex items-start gap-3 text-left transition relative group hover:bg-slate-50/60 ${
                                 !n.isRead ? 'bg-indigo-50/20' : ''
                               }`}
                             >
-                              <div className={`p-2 rounded-xl shrink-0 ${iconBgColor()}`}>
-                                <IconComponent />
-                              </div>
-                              <div className="flex-1 min-w-0 pr-1.5">
-                                <div className="flex items-start justify-between gap-1">
-                                  <p className={`text-[11px] leading-normal ${!n.isRead ? 'font-black text-slate-900' : 'font-bold text-slate-700'}`}>
-                                    {n.title}
-                                  </p>
-                                  <span className="text-[9px] text-slate-400 font-extrabold shrink-0 whitespace-nowrap">{n.time}</span>
+                              <button
+                                onClick={() => handleToggleReadStatus(n.id)}
+                                className="flex-1 flex items-start gap-3 text-left min-w-0"
+                              >
+                                <div className={`p-2 rounded-xl shrink-0 ${iconBgColor()}`}>
+                                  <IconComponent />
                                 </div>
-                                <p className="text-[10px] text-slate-500 font-medium leading-relaxed mt-0.5 break-words">
-                                  {n.description}
-                                </p>
-                              </div>
-                            </button>
+                                <div className="flex-1 min-w-0 pr-6">
+                                  <div className="flex items-start justify-between gap-1 text-left">
+                                    <p className={`text-[11px] leading-normal ${!n.isRead ? 'font-black text-slate-900' : 'font-bold text-slate-700'}`}>
+                                      {n.title}
+                                    </p>
+                                    <span className="text-[9px] text-slate-400 font-extrabold shrink-0 whitespace-nowrap ml-1">{n.time}</span>
+                                  </div>
+                                  <p className="text-[10px] text-slate-500 font-medium leading-relaxed mt-0.5 break-words">
+                                    {n.description}
+                                  </p>
+                                </div>
+                              </button>
+
+                              {/* Close/dismiss button */}
+                              <button
+                                onClick={(e) => handleDismissNotification(n.id, e)}
+                                className="absolute right-2 top-2 p-1 rounded-full text-slate-300 hover:text-rose-500 hover:bg-rose-55 opacity-0 group-hover:opacity-100 focus:opacity-100 transition-all duration-150"
+                                title="Fechar"
+                              >
+                                <X className="h-3.5 w-3.5" />
+                              </button>
+                            </div>
                           );
                         })
                       )}
