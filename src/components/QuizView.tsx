@@ -16,9 +16,10 @@ interface QuizViewProps {
   setView: (view: any) => void;
   course?: any;
   onUpdateProgress?: (courseId: string, progress: number) => void;
+  onQuizFinish?: (courseId: string, score: number, totalQuestions: number, passed: boolean) => void;
 }
 
-export default function QuizView({ setView, course, onUpdateProgress }: QuizViewProps) {
+export default function QuizView({ setView, course, onUpdateProgress, onQuizFinish }: QuizViewProps) {
   const [questions, setQuestions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentIdx, setCurrentIdx] = useState(0);
@@ -113,6 +114,9 @@ export default function QuizView({ setView, course, onUpdateProgress }: QuizView
       const pct = Math.round((score / questions.length) * 100);
       if (pct >= 70 && onUpdateProgress && course) {
         onUpdateProgress(course.id, 100); // 105% finished!
+      }
+      if (onQuizFinish && course) {
+        onQuizFinish(course.id, score, questions.length, pct >= 70);
       }
     }
   };

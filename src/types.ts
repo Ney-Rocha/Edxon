@@ -3,7 +3,7 @@ export type UserStatus = 'Ativo' | 'Pendente' | 'Inativo';
 export type TrainingStatus = 'Publicado' | 'Rascunho' | 'Arquivado';
 export type TrainingType = 'Vídeo' | 'PDF' | 'Interativo';
 export type ActivityStatus = 'SUCCESS' | 'IN_PROGRESS' | 'FILE';
-export type LogStatus = 'Sucesso' | 'Info';
+export type LogStatus = 'Sucesso' | 'Info' | 'Falha';
 
 export interface User {
   id: string;

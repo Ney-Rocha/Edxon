@@ -48,8 +48,8 @@ export default function App() {
   const [dbConnected, setDbConnected] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
 
-  const handleResetDb = async () => {
-    if (!window.confirm("Atenção: deseja resetar e limpar o banco de dados? Todos os demais colaboradores e treinamentos inseridos serão excluídos, mantendo apenas o Admin e 1 treinamento padrão de exemplo.")) {
+  const handleResetDb = async (skipConfirm = false) => {
+    if (!skipConfirm && !window.confirm("Atenção: deseja resetar e limpar o banco de dados? Todos os demais colaboradores e treinamentos inseridos serão excluídos, mantendo apenas o Admin e 1 treinamento padrão de exemplo.")) {
       return;
     }
     setIsResetting(true);
@@ -158,6 +158,39 @@ export default function App() {
           dbService.upsertUser(added).then(() => {
             showSyncToast(`Colaborador ${added.name} cadastrado com sucesso!`, 'success');
           }).catch(() => {});
+
+          // LOG ACTION: user creation
+          setTimeout(() => {
+            const userName = loggedInUser?.name || 'Administrador';
+            const userInitials = userName.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() || 'AD';
+            const timestampStr = new Date().toLocaleString('pt-BR', { hour12: false });
+
+            const act: RecentActivity = {
+              id: `act-useradd-${Date.now()}`,
+              user: {
+                name: userName,
+                avatar: loggedInUser?.avatar || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(userName)}`
+              },
+              action: `Cadastrou o colaborador "${added.name}" (${added.role === 'admin' ? 'Administrador' : 'Aluno'}).`,
+              status: 'SUCCESS',
+              time: 'Agora mesmo'
+            };
+
+            const sysLog: SystemLog = {
+              id: `log-useradd-${Date.now()}`,
+              timestamp: timestampStr,
+              user: { name: userName, initials: userInitials, bgColor: added.role === 'admin' ? 'bg-indigo-150' : 'bg-slate-150', textColor: 'text-indigo-800' },
+              action: 'Cadastro de Usuário',
+              training: `Usuário: ${added.name}`,
+              ip: '192.168.1.189',
+              status: 'Sucesso'
+            };
+
+            setRecentActivities(prev => [act, ...prev]);
+            setSystemLogs(prev => [sysLog, ...prev]);
+            dbService.addActivity(act).catch(() => {});
+            dbService.addLog(sysLog).catch(() => {});
+          }, 0);
         }
       } else if (nextValue.length < prevUsers.length) {
         const deleted = prevUsers.find(ou => !nextValue.some(nu => nu.id === ou.id));
@@ -165,6 +198,39 @@ export default function App() {
           dbService.deleteUser(deleted.id).then(() => {
             showSyncToast(`Colaborador ${deleted.name} excluído com sucesso!`, 'success');
           }).catch(() => {});
+
+          // LOG ACTION: user deletion
+          setTimeout(() => {
+            const userName = loggedInUser?.name || 'Administrador';
+            const userInitials = userName.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() || 'AD';
+            const timestampStr = new Date().toLocaleString('pt-BR', { hour12: false });
+
+            const act: RecentActivity = {
+              id: `act-userdel-${Date.now()}`,
+              user: {
+                name: userName,
+                avatar: loggedInUser?.avatar || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(userName)}`
+              },
+              action: `Excluiu o colaborador "${deleted.name}".`,
+              status: 'SUCCESS',
+              time: 'Agora mesmo'
+            };
+
+            const sysLog: SystemLog = {
+              id: `log-userdel-${Date.now()}`,
+              timestamp: timestampStr,
+              user: { name: userName, initials: userInitials, bgColor: 'bg-rose-100', textColor: 'text-rose-800' },
+              action: 'Exclusão de Usuário',
+              training: `Usuário: ${deleted.name}`,
+              ip: '192.168.1.189',
+              status: 'Sucesso'
+            };
+
+            setRecentActivities(prev => [act, ...prev]);
+            setSystemLogs(prev => [sysLog, ...prev]);
+            dbService.addActivity(act).catch(() => {});
+            dbService.addLog(sysLog).catch(() => {});
+          }, 0);
         }
       } else {
         nextValue.forEach(nu => {
@@ -173,6 +239,39 @@ export default function App() {
             dbService.upsertUser(nu).then(() => {
               showSyncToast(`Dados/Status de ${nu.name} sincronizados!`, 'success');
             }).catch(() => {});
+
+            // LOG ACTION: user update
+            setTimeout(() => {
+              const userName = loggedInUser?.name || 'Administrador';
+              const userInitials = userName.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() || 'AD';
+              const timestampStr = new Date().toLocaleString('pt-BR', { hour12: false });
+
+              const act: RecentActivity = {
+                id: `act-useredit-${Date.now()}-${nu.id}`,
+                user: {
+                  name: userName,
+                  avatar: loggedInUser?.avatar || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(userName)}`
+                },
+                action: `Alterou informações/dados do colaborador "${nu.name}".`,
+                status: 'SUCCESS',
+                time: 'Agora mesmo'
+              };
+
+              const sysLog: SystemLog = {
+                id: `log-useredit-${Date.now()}-${nu.id}`,
+                timestamp: timestampStr,
+                user: { name: userName, initials: userInitials, bgColor: 'bg-amber-100', textColor: 'text-amber-800' },
+                action: 'Alteração de Usuário',
+                training: `Usuário: ${nu.name} (${nu.status})`,
+                ip: '192.168.1.189',
+                status: 'Sucesso'
+              };
+
+              setRecentActivities(prev => [act, ...prev]);
+              setSystemLogs(prev => [sysLog, ...prev]);
+              dbService.addActivity(act).catch(() => {});
+              dbService.addLog(sysLog).catch(() => {});
+            }, 0);
           }
         });
       }
@@ -192,6 +291,39 @@ export default function App() {
           dbService.upsertTraining(added).then(() => {
             showSyncToast(`Treinamento "${added.title}" adicionado ao Supabase!`, 'success');
           }).catch(() => {});
+
+          // LOG ACTION: course creation
+          setTimeout(() => {
+            const userName = loggedInUser?.name || 'Administrador';
+            const userInitials = userName.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() || 'AD';
+            const timestampStr = new Date().toLocaleString('pt-BR', { hour12: false });
+
+            const act: RecentActivity = {
+              id: `act-add-${Date.now()}`,
+              user: {
+                name: userName,
+                avatar: loggedInUser?.avatar || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(userName)}`
+              },
+              action: `Criou o treinamento "${added.title}".`,
+              status: 'SUCCESS',
+              time: 'Agora mesmo'
+            };
+
+            const sysLog: SystemLog = {
+              id: `log-add-${Date.now()}`,
+              timestamp: timestampStr,
+              user: { name: userName, initials: userInitials, bgColor: 'bg-emerald-100', textColor: 'text-emerald-800' },
+              action: 'Criação de Curso',
+              training: added.title,
+              ip: '192.168.1.189',
+              status: 'Sucesso'
+            };
+
+            setRecentActivities(prev => [act, ...prev]);
+            setSystemLogs(prev => [sysLog, ...prev]);
+            dbService.addActivity(act).catch(() => {});
+            dbService.addLog(sysLog).catch(() => {});
+          }, 0);
         }
       } else if (nextValue.length < prevTrainings.length) {
         const deleted = prevTrainings.find(ot => !nextValue.some(nt => nt.id === ot.id));
@@ -199,6 +331,39 @@ export default function App() {
           dbService.deleteTraining(deleted.id).then(() => {
             showSyncToast(`Treinamento "${deleted.title}" excluído do Supabase!`, 'success');
           }).catch(() => {});
+
+          // LOG ACTION: course deletion
+          setTimeout(() => {
+            const userName = loggedInUser?.name || 'Administrador';
+            const userInitials = userName.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() || 'AD';
+            const timestampStr = new Date().toLocaleString('pt-BR', { hour12: false });
+
+            const act: RecentActivity = {
+              id: `act-del-${Date.now()}`,
+              user: {
+                name: userName,
+                avatar: loggedInUser?.avatar || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(userName)}`
+              },
+              action: `Excluiu o treinamento "${deleted.title}".`,
+              status: 'SUCCESS',
+              time: 'Agora mesmo'
+            };
+
+            const sysLog: SystemLog = {
+              id: `log-del-${Date.now()}`,
+              timestamp: timestampStr,
+              user: { name: userName, initials: userInitials, bgColor: 'bg-rose-100', textColor: 'text-rose-800' },
+              action: 'Exclusão de Curso',
+              training: deleted.title,
+              ip: '192.168.1.189',
+              status: 'Sucesso'
+            };
+
+            setRecentActivities(prev => [act, ...prev]);
+            setSystemLogs(prev => [sysLog, ...prev]);
+            dbService.addActivity(act).catch(() => {});
+            dbService.addLog(sysLog).catch(() => {});
+          }, 0);
         }
       } else {
         nextValue.forEach(nt => {
@@ -207,6 +372,39 @@ export default function App() {
             dbService.upsertTraining(nt).then(() => {
               showSyncToast(`Treinamento "${nt.title}" editado e salvo!`, 'success');
             }).catch(() => {});
+
+            // LOG ACTION: course update
+            setTimeout(() => {
+              const userName = loggedInUser?.name || 'Administrador';
+              const userInitials = userName.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() || 'AD';
+              const timestampStr = new Date().toLocaleString('pt-BR', { hour12: false });
+
+              const act: RecentActivity = {
+                id: `act-edit-${Date.now()}-${nt.id}`,
+                user: {
+                  name: userName,
+                  avatar: loggedInUser?.avatar || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(userName)}`
+                },
+                action: `Editou as informações do treinamento "${nt.title}".`,
+                status: 'SUCCESS',
+                time: 'Agora mesmo'
+              };
+
+              const sysLog: SystemLog = {
+                id: `log-edit-${Date.now()}-${nt.id}`,
+                timestamp: timestampStr,
+                user: { name: userName, initials: userInitials, bgColor: 'bg-blue-100', textColor: 'text-blue-800' },
+                action: 'Edição de Curso',
+                training: nt.title,
+                ip: '192.168.1.189',
+                status: 'Sucesso'
+              };
+
+              setRecentActivities(prev => [act, ...prev]);
+              setSystemLogs(prev => [sysLog, ...prev]);
+              dbService.addActivity(act).catch(() => {});
+              dbService.addLog(sysLog).catch(() => {});
+            }, 0);
           }
         });
       }
@@ -492,7 +690,41 @@ export default function App() {
 
   const handleLoginSuccess = (name: string, email: string) => {
     const existing = users.find((u) => u.email.toLowerCase() === email.toLowerCase());
-    
+    const finalUser = existing || {
+      id: `u-${Date.now()}`,
+      name,
+      email,
+      role: 'usuario' as const,
+      status: 'Ativo',
+      avatar: `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(name)}`
+    };
+
+    const userName = finalUser.name;
+    const userRoleText = finalUser.role === 'admin' ? 'Administrador' : 'Aluno';
+    const timestampStr = new Date().toLocaleString('pt-BR', { hour12: false });
+    const userInitials = userName.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() || 'US';
+
+    const act: RecentActivity = {
+      id: `act-login-${Date.now()}`,
+      user: {
+        name: userName,
+        avatar: finalUser.avatar || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(userName)}`
+      },
+      action: `Efetuou login no portal EDXOn como ${userRoleText}.`,
+      status: 'SUCCESS',
+      time: 'Agora mesmo'
+    };
+
+    const sysLog: SystemLog = {
+      id: `log-login-${Date.now()}`,
+      timestamp: timestampStr,
+      user: { name: userName, initials: userInitials, bgColor: 'bg-indigo-100', textColor: 'text-indigo-800' },
+      action: 'Início de Sessão',
+      training: 'Conexão Estabelecida',
+      ip: '192.168.1.189',
+      status: 'Sucesso'
+    };
+
     if (existing) {
       setCurrentUserEmail(existing.email);
       setRole(existing.role);
@@ -500,14 +732,7 @@ export default function App() {
       setView(existing.role === 'admin' ? 'admin-dashboard' : 'student-dashboard');
     } else {
       // New users registered always default strictly to 'usuario' role
-      const newUser: User = {
-        id: `u-${Date.now()}`,
-        name,
-        email,
-        role: 'usuario',
-        status: 'Ativo',
-        avatar: `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(name)}`
-      };
+      const newUser: User = finalUser;
 
       syncSetUsers((prev) => [newUser, ...prev]);
       setCurrentUserEmail(email);
@@ -515,6 +740,14 @@ export default function App() {
       setIsLoggedIn(true);
       setView('student-dashboard');
     }
+
+    // Add login logs/activities
+    setTimeout(() => {
+      setRecentActivities(prev => [act, ...prev]);
+      setSystemLogs(prev => [sysLog, ...prev]);
+      dbService.addActivity(act).catch(() => {});
+      dbService.addLog(sysLog).catch(() => {});
+    }, 0);
   };
 
   // Enforce profile-based view access protection (Client-side automatic redirection)
@@ -739,6 +972,47 @@ export default function App() {
     });
   };
 
+  const handleQuizFinish = (courseId: string, score: number, totalQuestions: number, passed: boolean) => {
+    const courseTitle = trainings.find(t => t.id === courseId)?.title || 'Treinamento Corporativo';
+    const userName = loggedInUser?.name || 'Colaborador';
+    const timestampStr = new Date().toLocaleString('pt-BR', { hour12: false });
+    const userInitials = userName.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() || 'US';
+    const pct = Math.round((score / totalQuestions) * 100);
+
+    const act: RecentActivity = {
+      id: `act-quiz-${Date.now()}`,
+      user: {
+        name: userName,
+        avatar: loggedInUser?.avatar || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(userName)}`
+      },
+      action: `Realizou a avaliação técnica de "${courseTitle}". Desempenho obtido: ${pct}% de acertos (${passed ? 'Aprovado' : 'Abaixo da Média'}).`,
+      status: passed ? 'SUCCESS' : 'IN_PROGRESS',
+      time: 'Agora mesmo'
+    };
+
+    const sysLog: SystemLog = {
+      id: `log-quiz-${Date.now()}`,
+      timestamp: timestampStr,
+      user: { name: userName, initials: userInitials, bgColor: passed ? 'bg-emerald-100' : 'bg-rose-100', textColor: passed ? 'text-emerald-800' : 'text-rose-800' },
+      action: 'Avaliação Realizada',
+      training: `${courseTitle} (${pct}%)`,
+      ip: '192.168.1.189',
+      status: passed ? 'Sucesso' : 'Falha'
+    };
+
+    setRecentActivities(prev => {
+      const next = [act, ...prev];
+      return Array.from(new Map(next.map(a => [a.id, a])).values());
+    });
+    setSystemLogs(prev => {
+      const next = [sysLog, ...prev];
+      return Array.from(new Map(next.map(l => [l.id, l])).values());
+    });
+
+    dbService.addActivity(act).catch(() => {});
+    dbService.addLog(sysLog).catch(() => {});
+  };
+
   const handleWatchLesson = (course: any) => {
     setSelectedCourseForLesson(course);
     setView('student-lesson');
@@ -794,7 +1068,14 @@ export default function App() {
           />
         );
       case 'parameters':
-        return <ParametersView currentUser={loggedInUser} dbConnected={dbConnected} />;
+        return (
+          <ParametersView 
+            currentUser={loggedInUser} 
+            dbConnected={dbConnected} 
+            onResetDb={handleResetDb}
+            isResetting={isResetting}
+          />
+        );
       case 'student-dashboard':
         return (
           <StudentDashboardView
@@ -822,6 +1103,7 @@ export default function App() {
             setView={setView}
             course={selectedCourseForLesson}
             onUpdateProgress={handleUpdateStudentProgress}
+            onQuizFinish={handleQuizFinish}
           />
         );
       default:
@@ -860,21 +1142,6 @@ export default function App() {
             >
               <Menu className="h-5 w-5" />
             </button>
-            <span className={`p-1 px-2.5 rounded-lg text-xs font-bold leading-normal border flex items-center gap-1 ${
-              dbConnected 
-                ? 'bg-emerald-50 text-emerald-750 border-emerald-100' 
-                : 'bg-amber-50 text-amber-700 border-amber-100'
-            }`}>
-              <Database className="h-3.5 w-3.5 animate-pulse" />
-              <span className="hidden sm:inline">
-                {dbConnected 
-                  ? (dbService.getDatabaseMode() === 'direct' 
-                      ? 'Supabase Conectado (Browser)' 
-                      : 'Supabase Conectado') 
-                  : 'Modo In-Memory'}
-              </span>
-              <span className="sm:hidden">{dbConnected ? 'DB Active' : 'Offline'}</span>
-            </span>
           </div>
 
           {/* Right Controls bar */}

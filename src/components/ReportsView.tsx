@@ -341,8 +341,7 @@ export default function ReportsView({
                 {[
                   { label: 'Leadership / Gestão Geral', count: 324, percent: 74, color: 'bg-indigo-600' },
                   { label: 'Soft Skills / Comunicação', count: 185, percent: 52, color: 'bg-emerald-500' },
-                  { label: 'Compliance & Regulatórios', count: 92, percent: 28, color: 'bg-amber-500' },
-                  { label: 'Tecnologia / Segurança', count: 48, percent: 14, color: 'bg-rose-500' }
+                  { label: 'Compliance & Regulatórios', count: 92, percent: 28, color: 'bg-amber-500' }
                 ].map((cat, idx) => (
                   <div key={idx} className="space-y-1">
                     <div className="flex items-center justify-between text-xs font-bold">
