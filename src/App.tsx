@@ -1140,7 +1140,7 @@ export default function App() {
   }
 
   return (
-    <div className="flex bg-slate-50 text-slate-800 min-h-screen font-sans">
+    <div className="flex bg-white text-slate-800 min-h-screen font-sans">
       {/* Side bar Navigation (Left) */}
       <Navigation
         currentView={currentView}

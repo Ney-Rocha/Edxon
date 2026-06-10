@@ -1,1 +1,69 @@
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,300;0,400;0,700;1,300;1,400;1,700&family=Poppins:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400;1,500;1,600;1,700&family=Nunito+Sans:ital,wght@0,300;0,400;0,600;0,700;1,300;1,400;1,600;1,700&display=swap');
 @import "tailwindcss";
+
+@theme {
+  --font-sans: "Montserrat", "Nunito Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Poppins", sans-serif;
+  --font-web: "Nunito Sans", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+
+  /* Absolute High Contrast Theme Colors */
+  --color-neon-green: #00ED2D;
+  --color-absolute-black: #000000;
+  --color-absolute-white: #ffffff;
+  
+  /* Retain compat with indigo and slate mappings, but high-contrast values */
+  --color-slate-50: #f8fafc;
+  --color-slate-100: #f1f5f9;
+  --color-slate-200: #e2e8f0;
+  --color-slate-300: #cbd5e1;
+  --color-slate-400: #94a3b8;
+  --color-slate-500: #64748b;
+  --color-slate-600: #475569;
+  --color-slate-700: #334155;
+  --color-slate-800: #1e293b;
+  --color-slate-900: #0f172a;
+  --color-slate-950: #020617;
+}
+
+/* Base custom resets for high contrast visual identity */
+body {
+  font-family: var(--font-sans);
+  background-color: var(--color-absolute-white);
+  color: var(--color-slate-900);
+}
+
+/* Web typography elements */
+h1, h2, h3, h4, .font-display {
+  font-family: var(--font-display);
+}
+
+.text-web {
+  font-family: var(--font-web);
+}
+
+/* Custom fluorescent neon border highlights */
+.border-neon {
+  border-color: #00ED2D !important;
+}
+
+.text-neon {
+  color: #00ED2D !important;
+}
+
+.bg-neon {
+  background-color: #00ED2D !important;
+}
+
+/* Clean buttons, scrollbar, focus */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #000000;
+}
+::-webkit-scrollbar-thumb {
+  background: #00ED2D;
+  border-radius: 3px;
+}

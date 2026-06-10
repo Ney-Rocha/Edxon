@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { ViewType, Role, User } from '../types';
 import { UI_IMAGES } from '../data';
+import DxonLogo from './DxonLogo';
 
 interface NavigationProps {
   currentView: ViewType;
@@ -63,7 +64,7 @@ export default function Navigation({
 
       {/* Navigation Aside Panel */}
       <aside
-        className={`fixed inset-y-0 left-0 z-50 w-64 bg-slate-900 text-slate-100 flex flex-col justify-between border-r border-slate-800 min-h-screen transition-transform duration-300 ease-in-out lg:relative lg:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-50 w-64 bg-[#000000] text-slate-100 flex flex-col justify-between border-r border-neutral-900 min-h-screen transition-transform duration-300 ease-in-out lg:relative lg:translate-x-0 ${
           isMobileOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
@@ -71,12 +72,9 @@ export default function Navigation({
         <div className="p-6">
           <div className="flex items-center justify-between mb-8">
             <div className="flex items-center space-x-3">
-              <div className="p-2 bg-indigo-600 rounded-lg flex items-center justify-center">
-                <Sparkles className="h-5 w-5 text-white" />
-              </div>
-              <div>
-                <h1 className="text-xl tracking-tight text-white"><span className="font-black text-[#00ED2D]">E</span><span className="font-light text-white">dxon</span></h1>
-                <p className="text-xs text-slate-400">LMS de Alta Definição</p>
+              <DxonLogo className="h-10 w-10 shrink-0" />
+              <div className="text-left leading-none">
+                <span className="text-[10px] font-bold text-[#00ED2D] bg-[#00ED2D]/10 px-2 py-1 rounded inline-block border border-[#00ED2D]/30 uppercase tracking-widest font-mono">LMS</span>
               </div>
             </div>
 
@@ -84,7 +82,7 @@ export default function Navigation({
             {onClose && (
               <button
                 onClick={onClose}
-                className="lg:hidden p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-850 transition"
+                className="lg:hidden p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-neutral-900 transition"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -105,10 +103,10 @@ export default function Navigation({
                         <button
                           key={item.id}
                           onClick={() => handleNavigationChange(item.id)}
-                          className={`w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                          className={`w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-semibold transition-all ${
                             isActive
-                              ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20'
-                              : 'text-slate-400 hover:bg-slate-800/60 hover:text-white'
+                              ? 'bg-[#00ED2D] text-[#000000] shadow-lg shadow-[#00ED2D]/15'
+                              : 'text-slate-400 hover:bg-neutral-900 hover:text-[#00ED2D]'
                           }`}
                         >
                           <Icon className="h-4 w-4 shrink-0" />
@@ -125,10 +123,10 @@ export default function Navigation({
                         <button
                           key={item.id}
                           onClick={() => handleNavigationChange(item.id)}
-                          className={`w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                          className={`w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-semibold transition-all ${
                             isActive
-                              ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20'
-                              : 'text-slate-400 hover:bg-slate-805 hover:text-white'
+                              ? 'bg-[#00ED2D] text-[#000000] shadow-lg shadow-[#00ED2D]/15'
+                              : 'text-slate-400 hover:bg-neutral-900 hover:text-[#00ED2D]'
                           }`}
                         >
                           <Icon className="h-4 w-4 shrink-0" />
@@ -142,16 +140,16 @@ export default function Navigation({
         </div>
 
         {/* Profile footer with connected context */}
-        <div className="p-4 border-t border-slate-800 bg-slate-950/40 space-y-4">
+        <div className="p-4 border-t border-neutral-900 bg-neutral-950/60 space-y-4">
           <div className="flex items-center space-x-3 px-2">
             <img
               src={currentUser?.avatar || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(currentUser?.name || 'User')}`}
               alt="Profile Avatar"
-              className="h-10 w-10 rounded-full border-2 border-indigo-500/20 object-cover"
+              className="h-10 w-10 rounded-full border-2 border-[#00ED2D]/20 object-cover"
               referrerPolicy="no-referrer"
             />
             <div className="min-w-0 flex-1">
-              <p className="text-sm font-semibold text-white truncate">
+              <p className="text-sm font-bold text-white truncate">
                 {currentUser?.name || 'Colaborador'}
               </p>
               <p className="text-xs text-slate-400 truncate">
