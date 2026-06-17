@@ -15,7 +15,8 @@ import {
   Activity,
   CheckCircle,
   History,
-  GraduationCap
+  GraduationCap,
+  FileText
 } from 'lucide-react';
 import { User } from '../types';
 
@@ -50,7 +51,12 @@ export default function StudentDashboardView({
       progress: 0,
       type: course.type || 'Vídeo',
       coverImage: course.coverImage,
-      videoUrl: course.videoUrl
+      videoUrl: course.videoUrl,
+      pdfUrl: course.pdfUrl,
+      duration: course.duration,
+      description: course.description,
+      category: course.category,
+      lessonsCount: course.lessonsCount || 1
     };
     setActiveCourses((prev) => [newCourse, ...prev]);
     
@@ -358,7 +364,20 @@ export default function StudentDashboardView({
                       Prazo Semestral
                     </span>
 
-                    <div className="flex gap-2">
+                    <div className="flex items-center gap-2">
+                      {c.pdfUrl && (
+                        <a
+                          href={c.pdfUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-rose-50 border border-rose-250 hover:bg-rose-100 text-rose-700 text-[11px] font-black transition-all"
+                          title="Visualizar Material PDF"
+                        >
+                          <FileText className="h-3.5 w-3.5 text-rose-600 shrink-0" />
+                          <span>PDF</span>
+                        </a>
+                      )}
+
                       <button
                         onClick={() => handleResumeCourse(c)}
                         className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-extrabold transition-all border ${
@@ -427,13 +446,21 @@ export default function StudentDashboardView({
                   </div>
                   <div className="space-y-1">
                     <span className="text-[8px] font-black text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded uppercase tracking-wider">
-                      Carga Horária: {ac.lessonsCount * 2}h
+                      Carga Horária: {ac.duration || `${ac.lessonsCount * 2}h`}
                     </span>
                     <h4 className="font-extrabold text-xs text-slate-950 line-clamp-2 md:min-h-[32px] leading-tight">
                       {ac.title}
                     </h4>
                   </div>
-                  <p className="text-[10px] text-slate-400 font-bold">{ac.lessonsCount} lições estruturadas para o colaborador</p>
+                  {ac.pdfUrl && (
+                    <div className="flex items-center gap-1.5 py-1 px-2.5 bg-rose-50 hover:bg-rose-100/80 text-rose-700 rounded-xl border border-rose-200 text-[9px] font-bold select-none cursor-pointer w-fit">
+                      <FileText className="h-3 w-3 text-rose-600 shrink-0" />
+                      <a href={ac.pdfUrl} target="_blank" rel="noopener noreferrer" className="hover:underline">
+                        Visualizar PDF Anexo
+                      </a>
+                    </div>
+                  )}
+                  <p className="text-[10px] text-slate-400 font-bold">{ac.lessonsCount === 1 ? '1 aula estruturada' : `${ac.lessonsCount || 1} aulas estruturadas`} para o colaborador</p>
                 </div>
 
                 <button

@@ -27,17 +27,14 @@ interface LessonViewProps {
     type: string;
     videoUrl?: string;
     pdfUrl?: string; // Complementary material reference
+    description?: string;
+    category?: string;
+    duration?: string;
+    lessonsCount?: number;
   };
   onBack: () => void;
   onUpdateProgress: (courseId: string, addedProgress: number) => void;
 }
-
-const LESSON_PLAYLIST = [
-  { id: 'l1', title: '01. Introdução à Abordagem Prática', duration: '12 min', status: 'completed' },
-  { id: 'l2', title: '02. Mapeamento de Cenários e Métodos de Trabalho', duration: '18 min', status: 'current' },
-  { id: 'l3', title: '03. Gestão e Resolução Inteligente de Objeções', duration: '15 min', status: 'pending' },
-  { id: 'l4', title: '04. Framework de Performance e Métricas de Sucesso', duration: '22 min', status: 'pending' }
-];
 
 const getYouTubeEmbedUrl = (url?: string): string | null => {
   if (!url) return null;
@@ -56,6 +53,7 @@ export default function LessonView({ course, onBack, onUpdateProgress }: LessonV
   const [activeTab, setActiveTab] = useState<'conteudo' | 'anotacoes' | 'apoio'>('conteudo');
   const [personalNotes, setPersonalNotes] = useState('');
   const [currentProgress, setCurrentProgress] = useState(course.progress);
+  const [activeLessonIdx, setActiveLessonIdx] = useState(0);
 
   // Video duration slider/bar simulation
   const [videoTimeline, setVideoTimeline] = useState(45); // percent
@@ -70,11 +68,22 @@ export default function LessonView({ course, onBack, onUpdateProgress }: LessonV
     setVideoSpeed(speeds[nextIdx]);
   };
 
+  const lessonsCount = course.lessonsCount || 1;
+  const lessons = Array.from({ length: lessonsCount }).map((_, idx) => {
+    const title = lessonsCount === 1 ? course.title : `${String(idx + 1).padStart(2, '0')}. Aula do Treinamento`;
+    const duration = course.duration || '45 min';
+    return {
+      id: `lesson-${idx + 1}`,
+      title,
+      duration
+    };
+  });
+
   const handleAdvanceLesson = () => {
-    // Progress increment of 34% per lesson completion
-    const nextProgress = Math.min(currentProgress + 34, 100);
+    const step = lessonsCount === 1 ? (100 - currentProgress) : Math.ceil(100 / lessonsCount);
+    const nextProgress = Math.min(currentProgress + step, 100);
     setCurrentProgress(nextProgress);
-    onUpdateProgress(course.id, 34);
+    onUpdateProgress(course.id, step);
 
     if (nextProgress >= 100) {
       setShowConfetti(true);
@@ -283,10 +292,16 @@ export default function LessonView({ course, onBack, onUpdateProgress }: LessonV
               {activeTab === 'conteudo' && (
                 <div className="space-y-4 font-medium text-xs text-slate-600 leading-relaxed">
                   <h3 className="font-extrabold text-slate-900 text-sm">Estrutura Curricular Oferecida</h3>
-                  <p>
-                    Este módulo instrucional aborda os tópicos cruciais exigidos pela governança corporativa e planos de PDIs (Plano de Desenvolvimento Individual). Certifique-se de assistir ao vídeo até o final e usar os materiais extras em PDF antes de prosseguir.
-                  </p>
-                  <p className="border-l-2 border-indigo-500 pl-3.5 bg-slate-50 py-2.5 rounded-r-lg font-medium">
+                  {course.description ? (
+                    <div className="text-xs text-slate-705 whitespace-pre-line leading-relaxed bg-slate-50/50 p-4 rounded-xl border border-slate-100">
+                      {course.description}
+                    </div>
+                  ) : (
+                    <p>
+                      Este módulo instrucional aborda os tópicos cruciais exigidos pela governança corporativa e planos de PDIs (Plano de Desenvolvimento Individual). Certifique-se de assistir ao vídeo até o final e usar os materiais extras em PDF antes de prosseguir.
+                    </p>
+                  )}
+                  <p className="border-l-2 border-[#00ED2D] pl-3.5 bg-slate-50 py-2.5 rounded-r-lg font-mono text-[10px] text-slate-500">
                     "O aprendizado continuado gera mitigação estrita de riscos na frente operacional de negócios, aumentando a qualidade de entregas."
                   </p>
                 </div>
@@ -317,62 +332,34 @@ export default function LessonView({ course, onBack, onUpdateProgress }: LessonV
               {activeTab === 'apoio' && (
                 <div className="space-y-3">
                   {course.pdfUrl ? (
-                    <div className="p-3 border border-slate-200 bg-indigo-50/10 hover:bg-slate-50 rounded-xl transition flex items-center justify-between">
+                    <div className="p-4 border border-rose-200 bg-rose-50/10 hover:bg-rose-50/30 rounded-2xl transition flex items-center justify-between">
                       <div className="flex items-center space-x-3">
-                        <span className="p-2 bg-rose-50 text-rose-600 rounded-lg">
+                        <span className="p-3 bg-rose-50 text-rose-600 rounded-xl border border-rose-100">
                           <FileText className="h-4 w-4" />
                         </span>
                         <div>
-                          <p className="text-xs font-bold text-slate-850">Apostila e Material do Treinamento.pdf</p>
-                          <p className="text-[10px] text-indigo-600 font-extrabold uppercase tracking-wide">Material Anexado pelo Instrutor</p>
+                          <p className="text-xs font-black text-slate-900">Apostila e Material do Treinamento</p>
+                          <p className="text-[10px] text-rose-600 font-extrabold uppercase tracking-wide">Material PDF Anexado na Criação</p>
                         </div>
                       </div>
                       <a
                         href={course.pdfUrl}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-xs font-black text-indigo-600 hover:underline px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg shadow-sm"
+                        className="text-xs font-black text-rose-700 hover:text-rose-800 px-3.5 py-2 bg-white border border-rose-200 rounded-xl shadow-sm hover:bg-rose-50 transition-all"
                       >
-                        Abrir PDF
+                        Visualizar PDF
                       </a>
                     </div>
-                  ) : null}
-
-                  <div className="p-3 border border-slate-150 hover:bg-slate-50 rounded-xl transition flex items-center justify-between">
-                    <div className="flex items-center space-x-3">
-                      <span className="p-2 bg-rose-50 rounded-lg text-rose-600">
-                        <FileText className="h-4 w-4" />
-                      </span>
+                  ) : (
+                    <div className="p-8 text-center bg-slate-50 rounded-2xl border border-slate-150 space-y-2">
+                      <FileText className="h-8 w-8 text-slate-300 mx-auto" />
                       <div>
-                        <p className="text-xs font-bold text-slate-850">Guia Geral de Integração do Aluno.pdf</p>
-                        <p className="text-[10px] text-slate-400">PDF • 12 MB • Guia de Boas-vindas</p>
+                        <p className="text-xs font-bold text-slate-800">Nenhum material de apoio anexado</p>
+                        <p className="text-[10px] text-slate-400">Este treinamento não possui materiais adicionais em PDF associados.</p>
                       </div>
                     </div>
-                    <button
-                      onClick={() => alert('Download do material de apoio iniciado com sucesso!')}
-                      className="text-xs font-bold text-indigo-600 hover:underline px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg shadow-sm"
-                    >
-                      Exportar
-                    </button>
-                  </div>
-
-                  <div className="p-3 border border-slate-150 hover:bg-slate-50 rounded-xl transition flex items-center justify-between">
-                    <div className="flex items-center space-x-3">
-                      <span className="p-2 bg-amber-50 rounded-lg text-amber-600">
-                        <BookOpen className="h-4 w-4" />
-                      </span>
-                      <div>
-                        <p className="text-xs font-bold text-slate-850">Artigos de Mitigação de Conflitos Opcional</p>
-                        <p className="text-[10px] text-slate-400">Link Externo • Casos da Harvard Business</p>
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => alert('Parceria certificada! Link aberto em aba segura do navegador.')}
-                      className="text-xs font-bold text-indigo-600 hover:underline px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg shadow-sm"
-                    >
-                      Visitar
-                    </button>
-                  </div>
+                  )}
                 </div>
               )}
             </div>
@@ -423,7 +410,7 @@ export default function LessonView({ course, onBack, onUpdateProgress }: LessonV
                 id="btn-complete-lesson"
               >
                 <CheckCircle className="h-4 w-4" />
-                <span>Simular Avanço de Aula (+34%)</span>
+                <span>Simular Avanço de Aula (+{lessonsCount === 1 ? (100 - currentProgress) : Math.ceil(100 / lessonsCount)}%)</span>
               </button>
             )}
 
@@ -441,16 +428,17 @@ export default function LessonView({ course, onBack, onUpdateProgress }: LessonV
                 <Video className="h-3.5 w-3.5 text-slate-400" />
                 <span>Índice de Aulas</span>
               </h4>
-              <span className="text-[10px] text-slate-400 font-bold">4 lições</span>
+              <span className="text-[10px] text-slate-400 font-bold">{lessons.length} {lessons.length === 1 ? 'aula' : 'aulas'}</span>
             </div>
 
-            <div className="divide-y divide-slate-100">
-              {LESSON_PLAYLIST.map((ls, idx) => {
-                const isCurrent = idx === 1; // simulation purposes
+            <div className="divide-y divide-slate-150/60">
+              {lessons.map((ls, idx) => {
+                const isCurrent = idx === activeLessonIdx;
                 return (
                   <button
                     key={ls.id}
                     onClick={() => {
+                      setActiveLessonIdx(idx);
                       setIsPlaying(true);
                     }}
                     className={`w-full p-4 flex items-center justify-between text-left hover:bg-slate-50/55 transition cursor-pointer ${
@@ -459,14 +447,14 @@ export default function LessonView({ course, onBack, onUpdateProgress }: LessonV
                   >
                     <div className="flex items-center space-x-3 pr-2">
                       <span className={`h-1.5 w-1.5 rounded-full ${
-                        idx === 0 
-                          ? 'bg-emerald-500' 
+                        idx < activeLessonIdx || currentProgress >= 100
+                          ? 'bg-[#00ED2D]' 
                           : isCurrent 
                             ? 'bg-indigo-500' 
                             : 'bg-slate-300'
                       }`} />
                       <p className={`text-xs font-bold line-clamp-1 ${
-                        isCurrent ? 'text-indigo-700' : 'text-slate-700'
+                        isCurrent ? 'text-indigo-705 font-black' : 'text-slate-700'
                       }`}>
                         {ls.title}
                       </p>
