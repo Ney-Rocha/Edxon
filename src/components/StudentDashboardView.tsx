@@ -15,10 +15,17 @@ import {
   Activity,
   CheckCircle,
   History,
-  GraduationCap,
-  FileText
+  FileText,
+  Download,
+  Droplet,
+  RotateCcw
 } from 'lucide-react';
 import { User } from '../types';
+
+const cleanDescription = (fullDescription?: string): string => {
+  if (!fullDescription) return '';
+  return fullDescription.split("\n\n===EDXON_DATA===\n")[0];
+};
 
 interface StudentDashboardViewProps {
   setView: (view: any) => void;
@@ -41,6 +48,32 @@ export default function StudentDashboardView({
   currentUser,
   onEnroll
 }: StudentDashboardViewProps) {
+  // Hydration Tracker State
+  const [waterIntake, setWaterIntake] = useState<number>(() => {
+    try {
+      const saved = localStorage.getItem(`edxon_water_${currentUser?.email || 'guest'}`);
+      return saved ? parseInt(saved, 10) : 0;
+    } catch {
+      return 0;
+    }
+  });
+
+  const waterGoal = 2000; // 2L daily goal
+  const waterPercent = Math.min(Math.round((waterIntake / waterGoal) * 100), 100);
+
+  const handleAddWater = (amount: number) => {
+    setWaterIntake((prev) => {
+      const newVal = Math.min(prev + amount, 4000); // Max 4L
+      localStorage.setItem(`edxon_water_${currentUser?.email || 'guest'}`, newVal.toString());
+      return newVal;
+    });
+  };
+
+  const handleResetWater = () => {
+    setWaterIntake(0);
+    localStorage.setItem(`edxon_water_${currentUser?.email || 'guest'}`, '0');
+  };
+
   // Enroll dynamic action
   const handleEnroll = (course: any) => {
     // Remove from available and prepend to active at 0% progress
@@ -102,6 +135,24 @@ export default function StudentDashboardView({
     onWatchLesson(course);
   };
 
+  const handleDownload = async (url: string, fileName: string) => {
+    try {
+      const response = await fetch(url);
+      if (!response.ok) throw new Error('Failed to fetch');
+      const blob = await response.blob();
+      const blobUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(blobUrl);
+    } catch (e) {
+      window.open(url, '_blank');
+    }
+  };
+
   return (
     <div className="space-y-8 animate-in fade-in duration-300">
       {/* Student Profile Header & Welcome Section */}
@@ -149,7 +200,7 @@ export default function StudentDashboardView({
       </div>
 
       {/* Bento-style Mini Dashboard Panel */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         
         {/* Card 1: Dynamic Performance Gauge */}
         <div id="gauge-card" className="bg-white rounded-3xl border border-slate-200/80 p-6 flex flex-col justify-between shadow-sm relative overflow-hidden">
@@ -243,11 +294,99 @@ export default function StudentDashboardView({
             </>
           ) : (
             <div className="h-full flex flex-col justify-center items-center text-center p-4">
-              <GraduationCap className="h-8 w-8 text-slate-300 mb-2" />
+              <BookOpen className="h-8 w-8 text-slate-300 mb-2" />
               <p className="text-xs font-black text-slate-700">Seu histórico está livre</p>
               <p className="text-[10px] text-slate-400 mt-1 max-w-xs">Matricule-se em qualquer treinamento para iniciar a sua jornada de capacitação.</p>
             </div>
           )}
+        </div>
+
+        {/* Card 3: Interactive Hydration Tracker (exactly matching the custom cup shape in the screenshot) */}
+        <div id="hydration-tracker-card" className="bg-white rounded-3xl border border-slate-200/80 p-5 flex flex-col justify-between shadow-sm relative overflow-hidden">
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-black text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                <Droplet className="h-3.5 w-3.5 text-sky-500 fill-sky-500" />
+                <span>Estudo & Hidratação</span>
+              </span>
+              <button
+                onClick={handleResetWater}
+                className="p-1 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors"
+                title="Reiniciar consumo do dia"
+              >
+                <RotateCcw className="h-3.5 w-3.5" />
+              </button>
+            </div>
+
+            <div className="flex items-center gap-3.5 py-1.5">
+              {/* Interactive SVG Water Cup precisely matching the drawing outline in the screenshot */}
+              <div className="relative shrink-0 flex items-center justify-center">
+                <svg viewBox="0 0 100 120" className="w-14 h-16 relative">
+                  <defs>
+                    <clipPath id="glass-clip-bento">
+                      {/* Straight parallel vertical edges, flat top edge, perfect U-shaped rounded curve at the bottom */}
+                      <path d="M 15,10 L 85,10 L 85,85 A 35,35 0 0,1 15,85 Z" />
+                    </clipPath>
+                  </defs>
+                  
+                  {/* Empty Glass cup background fill */}
+                  <path d="M 15,10 L 85,10 L 85,85 A 35,35 0 0,1 15,85 Z" fill="#f0f9ff" className="dark:fill-slate-900" />
+                  
+                  {/* Blue Water Liquid filling matching progress percentage */}
+                  <rect 
+                    x="0" 
+                    y={105 - waterPercent} 
+                    width="100" 
+                    height="120" 
+                    fill="#38bdf8" 
+                    clipPath="url(#glass-clip-bento)" 
+                    className="transition-all duration-700 ease-out" 
+                  />
+                  
+                  {/* Dark Blue glass stroke outline drawing matching the screenshot continuous line shape */}
+                  <path 
+                    d="M 15,10 L 85,10 L 85,85 A 35,35 0 0,1 15,85 Z" 
+                    fill="none" 
+                    stroke="#0284c7" 
+                    strokeWidth="5" 
+                    strokeLinecap="round" 
+                    strokeLinejoin="round" 
+                  />
+                </svg>
+                {/* Float Percentage Indicator over the cup */}
+                <span className="absolute text-[10px] font-extrabold text-sky-950 bg-white/70 px-1 py-0.5 rounded shadow-sm text-center select-none pointer-events-none">
+                  {waterPercent}%
+                </span>
+              </div>
+
+              {/* Water stats and description info */}
+              <div className="space-y-1 flex-1 min-w-0">
+                <p className="text-xs font-black text-slate-900 truncate">
+                  {waterIntake} ml / {waterGoal} ml
+                </p>
+                <p className="text-[10px] text-slate-500 leading-snug">
+                  Estudos exigem energia. Hidrate-se para manter o foco e rendimento!
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="pt-3 border-t border-slate-100 flex flex-col gap-2">
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                onClick={() => handleAddWater(250)}
+                className="py-2 px-2.5 bg-sky-50 hover:bg-sky-100 text-sky-700 font-extrabold rounded-xl text-[10px] transition-all border border-sky-100 hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
+              >
+                + 250ml
+              </button>
+              <button
+                onClick={() => handleAddWater(500)}
+                className="py-2 px-2.5 bg-sky-500 hover:bg-sky-600 text-white font-extrabold rounded-xl text-[10px] transition-all shadow-sm hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
+              >
+                + 500ml
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -366,16 +505,14 @@ export default function StudentDashboardView({
 
                     <div className="flex items-center gap-2">
                       {c.pdfUrl && (
-                        <a
-                          href={c.pdfUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-rose-50 border border-rose-250 hover:bg-rose-100 text-rose-700 text-[11px] font-black transition-all"
-                          title="Visualizar Material PDF"
+                        <button
+                          onClick={() => handleDownload(c.pdfUrl, `${c.title}.pdf`)}
+                          className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-rose-50 border border-rose-250 hover:bg-rose-100 text-rose-700 text-[11px] font-black transition-all cursor-pointer"
+                          title="Baixar Apostila PDF"
                         >
-                          <FileText className="h-3.5 w-3.5 text-rose-600 shrink-0" />
-                          <span>PDF</span>
-                        </a>
+                          <Download className="h-3.5 w-3.5 text-rose-600 shrink-0" />
+                          <span>Baixar PDF</span>
+                        </button>
                       )}
 
                       <button
@@ -452,13 +589,20 @@ export default function StudentDashboardView({
                       {ac.title}
                     </h4>
                   </div>
-                  {ac.pdfUrl && (
-                    <div className="flex items-center gap-1.5 py-1 px-2.5 bg-rose-50 hover:bg-rose-100/80 text-rose-700 rounded-xl border border-rose-200 text-[9px] font-bold select-none cursor-pointer w-fit">
-                      <FileText className="h-3 w-3 text-rose-600 shrink-0" />
-                      <a href={ac.pdfUrl} target="_blank" rel="noopener noreferrer" className="hover:underline">
-                        Visualizar PDF Anexo
-                      </a>
+                  {ac.description && (
+                    <div className="text-[10px] text-slate-500 line-clamp-3 bg-slate-50 p-2 rounded-lg border border-slate-100 font-medium leading-relaxed" title="Ementa Detalhada">
+                      <span className="font-bold text-slate-700 block text-[9px] uppercase mb-0.5">Ementa Detalhada:</span>
+                      {cleanDescription(ac.description)}
                     </div>
+                  )}
+                  {ac.pdfUrl && (
+                    <button
+                      onClick={() => handleDownload(ac.pdfUrl, `${ac.title}.pdf`)}
+                      className="flex items-center gap-1.5 py-1 px-2.5 bg-rose-50 hover:bg-rose-100/80 text-rose-700 rounded-xl border border-rose-200 text-[9px] font-bold cursor-pointer w-fit"
+                    >
+                      <Download className="h-3 w-3 text-rose-600 shrink-0" />
+                      <span>Baixar PDF</span>
+                    </button>
                   )}
                   <p className="text-[10px] text-slate-400 font-bold">{ac.lessonsCount === 1 ? '1 aula estruturada' : `${ac.lessonsCount || 1} aulas estruturadas`} para o colaborador</p>
                 </div>

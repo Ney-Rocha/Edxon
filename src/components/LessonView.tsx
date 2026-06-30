@@ -15,7 +15,8 @@ import {
   Award,
   Video,
   ChevronRight,
-  ChevronLeft
+  ChevronLeft,
+  Download
 } from 'lucide-react';
 
 interface LessonViewProps {
@@ -34,6 +35,47 @@ interface LessonViewProps {
   };
   onBack: () => void;
   onUpdateProgress: (courseId: string, addedProgress: number) => void;
+  onGoToQuiz?: () => void;
+}
+
+interface ExtendedData {
+  description: string;
+  lessons: { id: string; title: string; videoUrl: string }[];
+  materials: { 
+    id: string; 
+    title: string; 
+    pdfUrl: string;
+    originalName?: string;
+    physicalName?: string;
+    path?: string;
+    size?: number;
+    mimeType?: string;
+    courseId?: string;
+  }[];
+}
+
+function deserializeTrainingData(fullDescription?: string): ExtendedData {
+  if (!fullDescription) {
+    return { description: '', lessons: [], materials: [] };
+  }
+  const parts = fullDescription.split("\n\n===EDXON_DATA===\n");
+  if (parts.length > 1) {
+    try {
+      const parsed = JSON.parse(parts[1]);
+      return {
+        description: parsed.realDescription || parts[0],
+        lessons: parsed.lessons || [],
+        materials: parsed.materials || []
+      };
+    } catch (e) {
+      // Fallback
+    }
+  }
+  return {
+    description: fullDescription,
+    lessons: [],
+    materials: []
+  };
 }
 
 const getYouTubeEmbedUrl = (url?: string): string | null => {
@@ -46,17 +88,47 @@ const getYouTubeEmbedUrl = (url?: string): string | null => {
   return null;
 };
 
-export default function LessonView({ course, onBack, onUpdateProgress }: LessonViewProps) {
+const getFileNameFromUrl = (url: string, defaultName: string): string => {
+  if (!url) return defaultName;
+  if (url.includes('dummy.pdf')) {
+    return 'Apostila_Complementar_de_Estudo.pdf';
+  }
+  try {
+    const decoded = decodeURIComponent(url);
+    const parts = decoded.split('/');
+    const lastPart = parts[parts.length - 1];
+    if (lastPart && lastPart.includes('.')) {
+      return lastPart.split('?')[0];
+    }
+  } catch (e) {
+    // Ignore error
+  }
+  return defaultName;
+};
+
+export default function LessonView({ course, onBack, onUpdateProgress, onGoToQuiz }: LessonViewProps) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [videoSpeed, setVideoSpeed] = useState<'1.0x' | '1.25x' | '1.5x' | '2.0x'>('1.0x');
   const [showConfetti, setShowConfetti] = useState(false);
-  const [activeTab, setActiveTab] = useState<'conteudo' | 'anotacoes' | 'apoio'>('conteudo');
+  const [activeTab, setActiveTab] = useState<'apoio' | 'anotacoes'>('apoio');
   const [personalNotes, setPersonalNotes] = useState('');
-  const [currentProgress, setCurrentProgress] = useState(course.progress);
+  const [currentProgress, setCurrentProgress] = useState(() => course?.progress || 0);
   const [activeLessonIdx, setActiveLessonIdx] = useState(0);
 
   // Video duration slider/bar simulation
   const [videoTimeline, setVideoTimeline] = useState(45); // percent
+
+  if (!course) {
+    return (
+      <div className="max-w-3xl mx-auto py-12 text-center text-xs font-semibold text-slate-500">
+        Nenhum curso selecionado. Por favor, volte ao{' '}
+        <button onClick={onBack} className="text-indigo-600 underline font-bold cursor-pointer">
+          Painel de Cursos
+        </button>{' '}
+        e selecione um treinamento.
+      </div>
+    );
+  }
 
   const handleTogglePlay = () => {
     setIsPlaying(!isPlaying);
@@ -68,18 +140,41 @@ export default function LessonView({ course, onBack, onUpdateProgress }: LessonV
     setVideoSpeed(speeds[nextIdx]);
   };
 
-  const lessonsCount = course.lessonsCount || 1;
-  const lessons = Array.from({ length: lessonsCount }).map((_, idx) => {
-    const title = lessonsCount === 1 ? course.title : `${String(idx + 1).padStart(2, '0')}. Aula do Treinamento`;
-    const duration = course.duration || '45 min';
-    return {
-      id: `lesson-${idx + 1}`,
-      title,
-      duration
-    };
-  });
+  const handleDownload = async (url: string, fileName: string) => {
+    try {
+      const response = await fetch(url);
+      if (!response.ok) throw new Error('Failed to fetch');
+      const blob = await response.blob();
+      const blobUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(blobUrl);
+    } catch (e) {
+      // Fallback: if CORS or other issues block the fetch, open in a new tab which triggers default action
+      window.open(url, '_blank');
+    }
+  };
+
+  const extended = deserializeTrainingData(course.description);
+
+  const lessons = (extended.lessons && extended.lessons.length > 0)
+    ? extended.lessons.map((ls) => ({ ...ls, duration: course.duration || '45 min' }))
+    : (course.videoUrl ? [{ id: 'fallback-l', title: course.title, videoUrl: course.videoUrl, duration: course.duration || '45 min' }] : []);
+
+  const fallbackPdf = course.pdfUrl || "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf";
+  const materials = (extended.materials && extended.materials.length > 0)
+    ? extended.materials
+    : [{ id: 'fallback-m', title: getFileNameFromUrl(fallbackPdf, 'Apostila_de_Estudo_do_Treinamento.pdf'), pdfUrl: fallbackPdf }];
+
+  const activeLessonVideoUrl = lessons[activeLessonIdx]?.videoUrl || course.videoUrl || '';
+  const activeLessonTitle = lessons[activeLessonIdx]?.title || course.title;
 
   const handleAdvanceLesson = () => {
+    const lessonsCount = lessons.length || 1;
     const step = lessonsCount === 1 ? (100 - currentProgress) : Math.ceil(100 / lessonsCount);
     const nextProgress = Math.min(currentProgress + step, 100);
     setCurrentProgress(nextProgress);
@@ -132,11 +227,11 @@ export default function LessonView({ course, onBack, onUpdateProgress }: LessonV
 
             {/* Simulated interactive active player monitor content */}
             {isPlaying ? (
-              getYouTubeEmbedUrl(course.videoUrl) ? (
+              getYouTubeEmbedUrl(activeLessonVideoUrl) ? (
                 <div className="absolute inset-0 z-20 bg-slate-950">
                   <iframe
-                    src={getYouTubeEmbedUrl(course.videoUrl) || ''}
-                    title={course.title}
+                    src={getYouTubeEmbedUrl(activeLessonVideoUrl) || ''}
+                    title={activeLessonTitle}
                     frameBorder="0"
                     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                     allowFullScreen
@@ -159,7 +254,7 @@ export default function LessonView({ course, onBack, onUpdateProgress }: LessonV
                       Módulo 01 • Transmissão Ativa
                     </span>
                     <h3 className="text-sm font-bold mt-1 max-w-sm sm:max-w-md drop-shadow">
-                      {course.title}
+                      {activeLessonTitle}
                     </h3>
                   </div>
                   <span className="inline-flex items-center gap-1.5 text-xs text-emerald-400 bg-emerald-950/60 px-2.5 py-1 rounded-full border border-emerald-900/40 backdrop-blur font-bold">
@@ -257,14 +352,14 @@ export default function LessonView({ course, onBack, onUpdateProgress }: LessonV
           <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
             <div className="flex border-b border-slate-100 bg-slate-50/50 p-2 gap-2">
               <button
-                onClick={() => setActiveTab('conteudo')}
+                onClick={() => setActiveTab('apoio')}
                 className={`flex-1 sm:flex-initial text-xs font-bold py-2 px-4 rounded-xl transition ${
-                  activeTab === 'conteudo'
+                  activeTab === 'apoio'
                     ? 'bg-white text-indigo-700 border border-slate-200 shadow-sm'
                     : 'text-slate-500 hover:text-slate-800 hover:bg-slate-100'
                 }`}
               >
-                Ementa Detalhada
+                Materiais de Apoio
               </button>
               <button
                 onClick={() => setActiveTab('anotacoes')}
@@ -276,34 +371,68 @@ export default function LessonView({ course, onBack, onUpdateProgress }: LessonV
               >
                 Suas Anotações
               </button>
-              <button
-                onClick={() => setActiveTab('apoio')}
-                className={`flex-1 sm:flex-initial text-xs font-bold py-2 px-4 rounded-xl transition ${
-                  activeTab === 'apoio'
-                    ? 'bg-white text-indigo-700 border border-slate-200 shadow-sm'
-                    : 'text-slate-500 hover:text-slate-800 hover:bg-slate-100'
-                }`}
-              >
-                Materiais de Apoio
-              </button>
             </div>
 
             <div className="p-6">
-              {activeTab === 'conteudo' && (
-                <div className="space-y-4 font-medium text-xs text-slate-600 leading-relaxed">
-                  <h3 className="font-extrabold text-slate-900 text-sm">Estrutura Curricular Oferecida</h3>
-                  {course.description ? (
-                    <div className="text-xs text-slate-705 whitespace-pre-line leading-relaxed bg-slate-50/50 p-4 rounded-xl border border-slate-100">
-                      {course.description}
-                    </div>
+              {activeTab === 'apoio' && (
+                <div className="space-y-3">
+                  {materials.length > 0 ? (
+                    materials.map((mat, index) => {
+                      const displayTitle = mat.pdfUrl 
+                        ? getFileNameFromUrl(mat.pdfUrl, mat.title || `Apostila ${index + 1}`) 
+                        : (mat.title || `Apostila ${index + 1}`);
+
+                      return (
+                        <div key={mat.id || index} className="p-4 border border-rose-200 bg-rose-50/10 hover:bg-rose-50/30 rounded-2xl transition flex items-center justify-between">
+                          <div className="flex items-center space-x-3">
+                            <span className="p-3 bg-rose-50 text-rose-600 rounded-xl border border-rose-100">
+                              <FileText className="h-4 w-4" />
+                            </span>
+                            <div 
+                              onClick={() => handleDownload(mat.pdfUrl, displayTitle)}
+                              className="cursor-pointer group flex flex-col"
+                              title="Clique para baixar este material PDF imediatamente"
+                            >
+                              <p className="text-xs font-black text-slate-900 group-hover:text-rose-600 group-hover:underline transition-all flex items-center gap-1.5">
+                                <span>{displayTitle}</span>
+                                <Download className="h-3.5 w-3.5 text-slate-400 group-hover:text-rose-600 opacity-100 transition-all" />
+                              </p>
+                              <p className="text-[10px] text-rose-600 font-extrabold uppercase tracking-wide group-hover:text-rose-700 transition-colors">
+                                Material PDF Anexado (Clique para baixar)
+                              </p>
+                            </div>
+                          </div>
+                          {mat.pdfUrl && (
+                            <div className="flex items-center gap-2">
+                              <a
+                                href={mat.pdfUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-xs font-black text-rose-700 hover:text-rose-800 px-3.5 py-2 bg-white border border-rose-200 rounded-xl shadow-sm hover:bg-rose-50 transition-all"
+                              >
+                                Visualizar
+                              </a>
+                              <button
+                                onClick={() => handleDownload(mat.pdfUrl, displayTitle)}
+                                className="text-xs font-black text-white bg-rose-600 hover:bg-rose-700 px-4 py-2 rounded-xl shadow-sm transition-all flex items-center gap-1.5 cursor-pointer"
+                              >
+                                <Download className="h-3.5 w-3.5" />
+                                <span>Baixar</span>
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })
                   ) : (
-                    <p>
-                      Este módulo instrucional aborda os tópicos cruciais exigidos pela governança corporativa e planos de PDIs (Plano de Desenvolvimento Individual). Certifique-se de assistir ao vídeo até o final e usar os materiais extras em PDF antes de prosseguir.
-                    </p>
+                    <div className="p-8 text-center bg-slate-50 rounded-2xl border border-slate-150 space-y-2">
+                      <FileText className="h-8 w-8 text-slate-300 mx-auto" />
+                      <div>
+                        <p className="text-xs font-bold text-slate-800">Nenhum material de apoio anexado</p>
+                        <p className="text-[10px] text-slate-400">Este treinamento não possui materiais adicionais em PDF associados.</p>
+                      </div>
+                    </div>
                   )}
-                  <p className="border-l-2 border-[#00ED2D] pl-3.5 bg-slate-50 py-2.5 rounded-r-lg font-mono text-[10px] text-slate-500">
-                    "O aprendizado continuado gera mitigação estrita de riscos na frente operacional de negócios, aumentando a qualidade de entregas."
-                  </p>
                 </div>
               )}
 
@@ -324,40 +453,6 @@ export default function LessonView({ course, onBack, onUpdateProgress }: LessonV
                     <div className="text-[10px] text-emerald-600 font-bold text-right flex items-center justify-end gap-1">
                       <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
                       Notas salvas localmente
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {activeTab === 'apoio' && (
-                <div className="space-y-3">
-                  {course.pdfUrl ? (
-                    <div className="p-4 border border-rose-200 bg-rose-50/10 hover:bg-rose-50/30 rounded-2xl transition flex items-center justify-between">
-                      <div className="flex items-center space-x-3">
-                        <span className="p-3 bg-rose-50 text-rose-600 rounded-xl border border-rose-100">
-                          <FileText className="h-4 w-4" />
-                        </span>
-                        <div>
-                          <p className="text-xs font-black text-slate-900">Apostila e Material do Treinamento</p>
-                          <p className="text-[10px] text-rose-600 font-extrabold uppercase tracking-wide">Material PDF Anexado na Criação</p>
-                        </div>
-                      </div>
-                      <a
-                        href={course.pdfUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-xs font-black text-rose-700 hover:text-rose-800 px-3.5 py-2 bg-white border border-rose-200 rounded-xl shadow-sm hover:bg-rose-50 transition-all"
-                      >
-                        Visualizar PDF
-                      </a>
-                    </div>
-                  ) : (
-                    <div className="p-8 text-center bg-slate-50 rounded-2xl border border-slate-150 space-y-2">
-                      <FileText className="h-8 w-8 text-slate-300 mx-auto" />
-                      <div>
-                        <p className="text-xs font-bold text-slate-800">Nenhum material de apoio anexado</p>
-                        <p className="text-[10px] text-slate-400">Este treinamento não possui materiais adicionais em PDF associados.</p>
-                      </div>
                     </div>
                   )}
                 </div>
@@ -394,29 +489,42 @@ export default function LessonView({ course, onBack, onUpdateProgress }: LessonV
                   Grade de Aulas Concluída!
                 </p>
                 <p className="text-[11px] leading-relaxed text-emerald-700">
-                  Parabéns! Você alcançou o progresso exigido de 100%. A avaliação oficial já está liberada para você no seu catálogo principal!
+                  Parabéns! Você alcançou o progresso exigido de 100%. Você já pode iniciar a avaliação oficial diretamente!
                 </p>
                 <button
-                  onClick={onBack}
-                  className="w-full py-2 bg-emerald-600 text-white rounded-xl text-[11px] font-bold hover:bg-emerald-700 transition"
+                  onClick={() => {
+                    if (onGoToQuiz) onGoToQuiz();
+                  }}
+                  className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 shadow-sm"
                 >
-                  Voltar e Fazer Prova
+                  <Award className="h-4 w-4" />
+                  <span>Iniciar Avaliação do Curso</span>
                 </button>
               </div>
             ) : (
-              <button
-                onClick={handleAdvanceLesson}
-                className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5"
-                id="btn-complete-lesson"
-              >
-                <CheckCircle className="h-4 w-4" />
-                <span>Simular Avanço de Aula (+{lessonsCount === 1 ? (100 - currentProgress) : Math.ceil(100 / lessonsCount)}%)</span>
-              </button>
+              <div className="space-y-2">
+                <button
+                  onClick={handleAdvanceLesson}
+                  className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5"
+                  id="btn-complete-lesson"
+                >
+                  <CheckCircle className="h-4 w-4" />
+                  <span>Simular Avanço de Aula (+{lessons.length === 1 ? (100 - currentProgress) : Math.ceil(100 / (lessons.length || 1))}%)</span>
+                </button>
+              </div>
             )}
 
             {currentProgress >= 60 && currentProgress < 100 && (
-              <div className="bg-indigo-50 border border-indigo-100 p-3 rounded-xl text-[11px] text-indigo-700 font-semibold leading-relaxed">
-                Você ultrapassou **60% de progresso**! Caso queira, a prova teórica de suficiência já foi destravada em sua tela inicial.
+              <div className="bg-indigo-50 border border-indigo-100 p-3 rounded-xl text-[11px] text-indigo-700 font-semibold leading-relaxed space-y-2">
+                <p>Você ultrapassou **60% de progresso**! Caso queira, a avaliação oficial já está liberada.</p>
+                <button
+                  onClick={() => {
+                    if (onGoToQuiz) onGoToQuiz();
+                  }}
+                  className="w-full py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-[10px] font-black uppercase tracking-wider transition"
+                >
+                  Fazer Prova Agora
+                </button>
               </div>
             )}
           </div>
@@ -468,26 +576,6 @@ export default function LessonView({ course, onBack, onUpdateProgress }: LessonV
                 );
               })}
             </div>
-          </div>
-
-          {/* AI Support helper panel box */}
-          <div className="bg-slate-900 rounded-2xl p-5 border border-slate-800 text-white flex flex-col justify-between space-y-4">
-            <div className="space-y-1.5">
-              <span className="p-1 px-2.5 bg-indigo-500/10 text-indigo-300 rounded-lg text-[9px] font-bold uppercase tracking-widest border border-indigo-500/20 inline-flex items-center gap-1">
-                <Sparkles className="h-3 w-3" />
-                Dúvida Técnica?
-              </span>
-              <p className="text-[11px] text-slate-300 leading-relaxed font-medium">
-                Precisa de uma revisão sumarizada dos conceitos desta lição no seu PDI? O EDXOn Gemini responde em tempo real.
-              </p>
-            </div>
-
-            <button
-              onClick={() => alert('Sua dúvida sobre a aula foi indexada aos canais de apoio do Gemini com sucesso e respondida no chat de apoio!')}
-              className="w-full py-2 bg-slate-800 hover:bg-slate-750 text-slate-205 border border-slate-700 text-[11px] font-bold rounded-xl transition"
-            >
-              Consultar Copiloto Gemini
-            </button>
           </div>
         </div>
       </div>

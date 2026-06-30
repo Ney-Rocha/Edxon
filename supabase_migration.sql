@@ -251,3 +251,117 @@ create policy "Allow read of audit logs only for admins" on system_logs
 create policy "Allow background registration of system logs" on system_logs
   for insert with check (true);
 
+
+-- --------------------------------------------------
+-- 11. CREATE TABLES FOR COURSES TYPES & EVALUATIONS
+-- --------------------------------------------------
+
+-- Tabela de Tipos de Curso
+create table if not exists tipos_curso (
+    id text primary key,
+    nome text not null,
+    descricao text,
+    created_at timestamp with time zone default timezone('utc'::text, now())
+);
+
+-- Tabela de Questões
+create table if not exists questoes (
+    id text primary key,
+    curso_id text not null references trainings(id) on delete cascade,
+    enunciado text not null,
+    explicacao text,
+    created_at timestamp with time zone default timezone('utc'::text, now())
+);
+
+-- Tabela de Alternativas das Questões
+create table if not exists alternativas (
+    id text primary key,
+    questao_id text not null references questoes(id) on delete cascade,
+    texto text not null,
+    correta boolean not null default false,
+    created_at timestamp with time zone default timezone('utc'::text, now())
+);
+
+-- --------------------------------------------------
+-- 12. INDEXES FOR EVALUATION TABLES
+-- --------------------------------------------------
+create index if not exists idx_questoes_curso_id on questoes(curso_id);
+create index if not exists idx_alternativas_questao_id on alternativas(questao_id);
+
+-- --------------------------------------------------
+-- 13. SEED DATA: COURSE TYPES & QUESTIONS
+-- --------------------------------------------------
+insert into tipos_curso (id, nome, descricao)
+values
+  ('ct-01', 'Obrigatório', 'Treinamento regulamentar ou exigência legal interna'),
+  ('ct-02', 'Recomendado', 'Treinamento importante para o desenvolvimento profissional'),
+  ('ct-03', 'Livre', 'Capacitação complementar optativa para equipes')
+on conflict (id) do update set
+  nome = excluded.nome,
+  descricao = excluded.descricao;
+
+insert into questoes (id, curso_id, enunciado, explicacao)
+values
+  ('q1', 'tr-01', 'Qual das alternativas abaixo melhor descreve o principal objetivo da LGPD (Lei Geral de Proteção de Dados)?', 'A escuta empática ativa e o foco em ganha-ganha restabelecem a harmonia sem causar atrito ou ressentimentos futuros na equipe.'),
+  ('q2', 'tr-01', 'O que caracteriza um "dado pessoal sensível" segundo os preceitos da LGPD?', 'Dados sobre origem racial, convicção religiosa, opinião política, saúde ou vida sexual necessitam de proteção acrescida por envolverem foro íntimo sensível.')
+on conflict (id) do update set
+  curso_id = excluded.curso_id,
+  enunciado = excluded.enunciado,
+  explicacao = excluded.explicacao;
+
+insert into alternativas (id, questao_id, texto, correta)
+values
+  ('alt1_1', 'q1', 'Proibir a circulação e processamento de informações digitais.', false),
+  ('alt1_2', 'q1', 'Assegurar a privacidade e proteger dados pessoais de cidadãos regulando o seu tratamento.', true),
+  ('alt1_3', 'q1', 'Facilitar a comercialização irrestrita de dados cadastrais de clientes.', false),
+  ('alt1_4', 'q1', 'Garantir que todas as empresas tenham acesso livre a dados governamentais.', false),
+  ('alt2_1', 'q2', 'Informações públicas de contato como e-mails de canais de atendimento.', false),
+  ('alt2_2', 'q2', 'Dados relativos a faturamento corporativo e registros de receita da empresa.', false),
+  ('alt2_3', 'q2', 'Dados sobre origem racial, convicção religiosa, opinião política, saúde ou vida sexual.', true),
+  ('alt2_4', 'q2', 'Apenas informações financeiras como extrato bancário ou histórico de cartões.', false)
+on conflict (id) do update set
+  questao_id = excluded.questao_id,
+  texto = excluded.texto,
+  correta = excluded.correta;
+
+-- --------------------------------------------------
+-- 14. ROW LEVEL SECURITY (RLS) & POLICIES
+-- --------------------------------------------------
+alter table tipos_curso enable row level security;
+alter table questoes enable row level security;
+alter table alternativas enable row level security;
+
+-- TIPOS_CURSO Table Policies
+drop policy if exists "Allow read of tipos_curso for everyone" on tipos_curso;
+drop policy if exists "Allow write of tipos_curso for admins only" on tipos_curso;
+
+create policy "Allow read of tipos_curso for everyone" on tipos_curso
+  for select using (true);
+
+create policy "Allow write of tipos_curso for admins only" on tipos_curso
+  for all using (exists (select 1 from users where role = 'admin'))
+  with check (exists (select 1 from users where role = 'admin'));
+
+-- QUESTOES Table Policies
+drop policy if exists "Allow read of questoes for everyone" on questoes;
+drop policy if exists "Allow write of questoes for admins only" on questoes;
+
+create policy "Allow read of questoes for everyone" on questoes
+  for select using (true);
+
+create policy "Allow write of questoes for admins only" on questoes
+  for all using (exists (select 1 from users where role = 'admin'))
+  with check (exists (select 1 from users where role = 'admin'));
+
+-- ALTERNATIVAS Table Policies
+drop policy if exists "Allow read of alternativas for everyone" on alternativas;
+drop policy if exists "Allow write of alternativas for admins only" on alternativas;
+
+create policy "Allow read of alternativas for everyone" on alternativas
+  for select using (true);
+
+create policy "Allow write of alternativas for admins only" on alternativas
+  for all using (exists (select 1 from users where role = 'admin'))
+  with check (exists (select 1 from users where role = 'admin'));
+
+

@@ -28,6 +28,7 @@ export interface Training {
   videoUrl?: string;
   pdfUrl?: string;
   courseTypeId?: string;
+  lessonsCount?: number;
 }
 
 export interface CourseType {
@@ -47,6 +48,7 @@ export interface Question {
   courseId: string;
   text: string;
   alternatives: Alternative[];
+  explanation?: string;
 }
 
 export interface RecentActivity {

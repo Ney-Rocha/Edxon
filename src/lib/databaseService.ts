@@ -48,6 +48,13 @@ if (URL && KEY && URL !== "" && KEY !== "") {
   }
 }
 
+export function isTableMissingError(error: any): boolean {
+  if (!error) return false;
+  if (error.code === "42P01" || error.code?.startsWith("PGRST")) return true;
+  const msg = (error.message || "").toLowerCase();
+  return msg.includes("could not find the table") || msg.includes("does not exist") || msg.includes("relation") || msg.includes("schema cache");
+}
+
 // Map functions to translate DB constraints securely
 function mapDbUserToClient(dbUser: any): User {
   let mappedRole: Role = "usuario";
@@ -541,7 +548,7 @@ export async function getCourseTypes(): Promise<CourseType[]> {
     try {
       const { data, error } = await supabaseDirect.from("tipos_curso").select("*");
       if (error) {
-        if (error.code === "42P01") return localCourseTypes;
+        if (isTableMissingError(error)) return localCourseTypes;
         throw error;
       }
       if (data && data.length > 0) {
@@ -553,11 +560,14 @@ export async function getCourseTypes(): Promise<CourseType[]> {
         return localCourseTypes;
       }
       for (const ct of localCourseTypes) {
-        await supabaseDirect.from("tipos_curso").insert({
+        const { error: seedErr } = await supabaseDirect.from("tipos_curso").insert({
           id: ct.id,
           nome: ct.name,
           descricao: ct.description
         });
+        if (seedErr && isTableMissingError(seedErr)) {
+          return localCourseTypes;
+        }
       }
       return localCourseTypes;
     } catch (e) {
@@ -582,11 +592,14 @@ export async function upsertCourseType(ct: CourseType): Promise<CourseType> {
     }).then(r => r.json());
   } else if (mode === 'direct' && supabaseDirect) {
     try {
-      await supabaseDirect.from("tipos_curso").upsert({
+      const { error } = await supabaseDirect.from("tipos_curso").upsert({
         id: ct.id,
         nome: ct.name,
         descricao: ct.description
       });
+      if (error && isTableMissingError(error)) {
+        console.log("[DatabaseService] Table 'tipos_curso' does not exist in schema. Skipping direct database save.");
+      }
     } catch (e) {
       console.error("[DatabaseService] Direct upsertCourseType failed:", e);
     }
@@ -610,7 +623,7 @@ export async function getQuestions(courseId?: string): Promise<Question[]> {
       }
       const { data: qData, error: qError } = await qQuery;
       if (qError) {
-        if (qError.code === "42P01") {
+        if (isTableMissingError(qError)) {
           return courseId ? localQuestions.filter(q => q.courseId === courseId) : localQuestions;
         }
         throw qError;
@@ -619,18 +632,25 @@ export async function getQuestions(courseId?: string): Promise<Question[]> {
       if (!qData || qData.length === 0) {
         if (courseId === "t1" || !courseId) {
           for (const q of localQuestions) {
-            await supabaseDirect.from("questoes").upsert({
+            const { error: insQErr } = await supabaseDirect.from("questoes").upsert({
               id: q.id,
               curso_id: q.courseId,
               enunciado: q.text
             });
+            if (insQErr && isTableMissingError(insQErr)) {
+              return courseId ? localQuestions.filter(q => q.courseId === courseId) : localQuestions;
+            }
+
             for (const alt of q.alternatives) {
-              await supabaseDirect.from("alternativas").upsert({
+              const { error: insAErr } = await supabaseDirect.from("alternativas").upsert({
                 id: alt.id,
                 questao_id: q.id,
                 texto: alt.text,
                 correta: alt.isCorrect
               });
+              if (insAErr && isTableMissingError(insAErr)) {
+                return courseId ? localQuestions.filter(q => q.courseId === courseId) : localQuestions;
+              }
             }
           }
           return courseId ? localQuestions.filter(q => q.courseId === courseId) : localQuestions;
@@ -656,7 +676,8 @@ export async function getQuestions(courseId?: string): Promise<Question[]> {
           id: row.id,
           courseId: row.curso_id || row.courseId,
           text: row.enunciado || row.text,
-          alternatives: alternativesList
+          alternatives: alternativesList,
+          explanation: row.explicacao || row.explanation
         });
       }
       return questionsList;
@@ -680,7 +701,22 @@ export async function saveCourseQuestions(courseId: string, questionsList: Quest
     }).then(r => r.json().then(d => !!d.success));
   } else if (mode === 'direct' && supabaseDirect) {
     try {
+      // Check if table exists
+      const { error: testErr } = await supabaseDirect.from("questoes").select("id").limit(1);
+      if (testErr && isTableMissingError(testErr)) {
+        console.log("[DatabaseService] Table 'questoes' does not exist in schema. Skipping direct database save, keeping in-memory.");
+        return true;
+      }
+
       const existingQOfCourse = await supabaseDirect.from("questoes").select("id").eq("curso_id", courseId);
+      if (existingQOfCourse.error) {
+        const qErr = existingQOfCourse.error;
+        if (isTableMissingError(qErr)) {
+          console.log("[DatabaseService] Table 'questoes' does not exist in schema. Skipping direct database save, keeping in-memory.");
+          return true;
+        }
+      }
+
       if (existingQOfCourse.data && existingQOfCourse.data.length > 0) {
         const oldIds = existingQOfCourse.data.map((r: any) => r.id);
         await supabaseDirect.from("alternativas").delete().in("questao_id", oldIds);
@@ -688,19 +724,32 @@ export async function saveCourseQuestions(courseId: string, questionsList: Quest
       }
 
       for (const q of questionsList) {
-        await supabaseDirect.from("questoes").insert({
+        const { error: qErr } = await supabaseDirect.from("questoes").insert({
           id: q.id,
           curso_id: courseId,
-          enunciado: q.text
+          enunciado: q.text,
+          explicacao: q.explanation
         });
+        if (qErr) {
+          if (isTableMissingError(qErr)) {
+            console.log("[DatabaseService] Table 'questoes' does not exist in schema. Skipping direct database save, keeping in-memory.");
+            return true;
+          }
+          console.warn("[DatabaseService] Failed inserting question:", qErr.message);
+          continue;
+        }
 
         for (const alt of q.alternatives) {
-          await supabaseDirect.from("alternativas").insert({
+          const { error: altErr } = await supabaseDirect.from("alternativas").insert({
             id: alt.id,
             questao_id: q.id,
             texto: alt.text,
             correta: alt.isCorrect
           });
+          if (altErr && isTableMissingError(altErr)) {
+            console.log("[DatabaseService] Table 'alternativas' does not exist in schema. Skipping direct database save, keeping in-memory.");
+            return true;
+          }
         }
       }
       return true;
@@ -722,7 +771,9 @@ export async function uploadFile(fileBase64: string, fileName: string, fileType?
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ fileBase64, fileName, fileType })
-    }).then(r => r.json());
+    }).then(r => r.json()).then(data => ({
+      publicUrl: data?.publicUrl || data?.url || ""
+    }));
   } else if (mode === 'direct' && supabaseDirect) {
     try {
       const byteCharacters = atob(fileBase64);

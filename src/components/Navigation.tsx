@@ -12,7 +12,6 @@ import {
 } from 'lucide-react';
 import { ViewType, Role, User } from '../types';
 import { UI_IMAGES } from '../data';
-import DxonLogo from './DxonLogo';
 
 interface NavigationProps {
   currentView: ViewType;
@@ -71,11 +70,9 @@ export default function Navigation({
         {/* Top Header Logo */}
         <div className="p-6">
           <div className="flex items-center justify-between mb-8">
-            <div className="flex items-center space-x-3">
-              <DxonLogo className="h-10 w-10 shrink-0" />
-              <div className="text-left leading-none">
-                <span className="text-[10px] font-bold text-[#00ED2D] bg-[#00ED2D]/10 px-2 py-1 rounded inline-block border border-[#00ED2D]/30 uppercase tracking-widest font-mono">LMS</span>
-              </div>
+            <div className="flex items-center space-x-2">
+              <span className="text-sm font-black tracking-widest text-[#00ED2D]">EDXOn</span>
+              <span className="text-[10px] font-bold text-[#00ED2D] bg-[#00ED2D]/10 px-2 py-1 rounded inline-block border border-[#00ED2D]/30 uppercase tracking-widest font-mono">LMS</span>
             </div>
 
             {/* Mobile Close Button */}

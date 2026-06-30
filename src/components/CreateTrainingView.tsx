@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Sparkles,
   BookOpen,
   Clock,
   Eye,
@@ -29,12 +28,65 @@ interface CreateTrainingViewProps {
   clearEditingTraining?: () => void;
 }
 
-const STOCK_IMAGES = [
-  { id: 'img-1', title: 'Liderança', url: 'https://lh3.googleusercontent.com/aida-public/AB6AXuC9L0E9rg0igYRRN-UpSFxzPWwi9drftSQsiepXS9aMGPIgwtW2U8d74NY6pr5K2iY_iDjGe3XWE7-YR9CRgBGKlWdDtmPkMKOLFr6fogauhyEpmDFh3GwA_zBtsICrcShfp8_GyrSK3OtN_T5OLQ2hjmAG4OgaDBzT3cl_4re6hbyjZ0zMDwbqJ2ijxlJECdSDj_wXhgf3nI1LquCQKAGQUoVK8_xJIxYhmVsoNg-8Bg3WAJy70RuPJiCKsdh9fvQiS6lU_1GBVhY' },
-  { id: 'img-2', title: 'Compliance', url: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBx5Ekdd4AMlwRjVWuLykPJ2-qE648HwOg7QqmiwV19PWLs5c04dGNXD2ufz67qgfKjYiycdteLXKrYjmS9NMGu7l0sXjmVMqjTqu1DvEsE5kDeb7JAkeh1wHQBkU-XmAqjFhLukk2Bb3_gZJ08FvXJXG2Lplqby04lGiNRdgGEh1pYEeViXgoCB36WHxCN3eo_bwBaDabTSsgPxLg9wx1eYtgEYYsxCApNRHylrFmDMp9U30vJpLD89-_r0KTP_m0xzDO3OIy7DOM' },
-  { id: 'img-3', title: 'Comunicação', url: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBOozTNrSEG49JAwIzT3PZBh0RqbgMKLyKv13zkB_zwBSksdjuuQ4UA2rRvnimQEZd3UpD7mf3CzVIYZTZYuM0ar8Sfpqkrs0lJJlLzLQAQVNqa_pkJOWHZi5BYiit1jS917twtFGLRxN1M4irXco4_I8Rl-wXxO_VQHKIDjDqe6aVmRryxOEt3dISkGeQLj_OH6IMmeip7Al6UWTh42wfk36Ox4Fa80yPlGr0n-3sDJDZ5rbznaQ5tc6G2tbLZF7DCXlyAbXvY4Sc' },
-  { id: 'img-4', title: 'Produtividade', url: 'https://lh3.googleusercontent.com/aida-public/AB6AXuAppBwmNmshrStD2CN8jz9_5cLJgm6LPb6FU_JhUUfCfqCv5CL4whrudfF-zUF37utf5a04zlOXItgsd4Q3dQWBG0umKLttf09HbG96ciPEsorDRBkp1bjkJ5TNwVqTNws5kEakNXAkKCPSbv1padkrrghHYql8hFt50D_RDMBXsvCNSUiUdyEU43cq9EZxnECUNHhZoGGzwE4Y0K4zFRUTCGZFx5wfdeZ8VswOYc26RFqvyIwfVas4rvJjXNdnBeHlgwmgliHHSMY' }
+const PRESET_COLORS = [
+  { name: 'Indigo', bg: '#6366f1', text: '#ffffff' },
+  { name: 'Azul Escuro', bg: '#1e293b', text: '#ffffff' },
+  { name: 'Esmeralda', bg: '#10b981', text: '#ffffff' },
+  { name: 'Crimson', bg: '#e11d48', text: '#ffffff' },
+  { name: 'Violeta', bg: '#7c3aed', text: '#ffffff' },
+  { name: 'Laranja', bg: '#f97316', text: '#ffffff' },
+  { name: 'Teal', bg: '#0d9488', text: '#ffffff' },
+  { name: 'Slate', bg: '#475569', text: '#ffffff' },
 ];
+
+interface ExtendedData {
+  description: string;
+  lessons: { id: string; title: string; videoUrl: string }[];
+  materials: { 
+    id: string; 
+    title: string; 
+    pdfUrl: string;
+    originalName?: string;
+    physicalName?: string;
+    path?: string;
+    size?: number;
+    mimeType?: string;
+    courseId?: string;
+  }[];
+}
+
+export function serializeTrainingData(descriptionText: string, lessons: any[], materials: any[]): string {
+  const payload = {
+    realDescription: descriptionText,
+    lessons: lessons || [],
+    materials: materials || []
+  };
+  return descriptionText + "\n\n===EDXON_DATA===\n" + JSON.stringify(payload);
+}
+
+export function deserializeTrainingData(fullDescription?: string): ExtendedData {
+  if (!fullDescription) {
+    return { description: '', lessons: [], materials: [] };
+  }
+  const parts = fullDescription.split("\n\n===EDXON_DATA===\n");
+  if (parts.length > 1) {
+    try {
+      const parsed = JSON.parse(parts[1]);
+      return {
+        description: parsed.realDescription || parts[0],
+        lessons: parsed.lessons || [],
+        materials: parsed.materials || []
+      };
+    } catch (e) {
+      // Fallback
+    }
+  }
+  return {
+    description: fullDescription,
+    lessons: [],
+    materials: []
+  };
+}
 
 export default function CreateTrainingView({
   trainings,
@@ -46,19 +98,90 @@ export default function CreateTrainingView({
   // Generate or preservation of Course ID
   const [courseId] = useState<string>(() => editingTraining ? editingTraining.id : `t${Date.now()}`);
 
+  const parsedData = editingTraining ? deserializeTrainingData(editingTraining.description) : null;
+
   // Main Form fields
   const [title, setTitle] = useState(editingTraining ? editingTraining.title : '');
   const [duration, setDuration] = useState(editingTraining ? editingTraining.duration || '4 horas' : '4 horas');
   const [type, setType] = useState<TrainingType>(editingTraining ? editingTraining.type : 'Vídeo');
   const [videoUrl, setVideoUrl] = useState(editingTraining ? editingTraining.videoUrl || '' : '');
   const [pdfUrl, setPdfUrl] = useState(editingTraining ? editingTraining.pdfUrl || '' : '');
-  const [description, setDescription] = useState(editingTraining ? editingTraining.description || '' : '');
-  const [selectedCover, setSelectedCover] = useState(editingTraining ? editingTraining.coverImage : STOCK_IMAGES[0].url);
-  const [customCoverUrl, setCustomCoverUrl] = useState(
-    editingTraining && !STOCK_IMAGES.some((img) => img.url === editingTraining.coverImage)
-      ? editingTraining.coverImage
-      : ''
-  );
+  const [description, setDescription] = useState(parsedData ? parsedData.description : (editingTraining ? editingTraining.description || '' : ''));
+
+  // Multi-Lesson / Multi-PDF State
+  const [lessons, setLessons] = useState<{ id: string; title: string; videoUrl: string }[]>(() => {
+    if (parsedData && parsedData.lessons.length > 0) return parsedData.lessons;
+    if (editingTraining && editingTraining.videoUrl) {
+      return [{ id: 'l1', title: editingTraining.title, videoUrl: editingTraining.videoUrl }];
+    }
+    return [];
+  });
+
+  const [materials, setMaterials] = useState<ExtendedData['materials']>(() => {
+    if (parsedData && parsedData.materials.length > 0) return parsedData.materials;
+    if (editingTraining && editingTraining.pdfUrl) {
+      return [{ id: 'm1', title: 'Material do Treinamento', pdfUrl: editingTraining.pdfUrl }];
+    }
+    return [];
+  });
+
+  const [uploadingMaterialIds, setUploadingMaterialIds] = useState<Record<string, boolean>>({});
+
+  // Helper to parse existing SVG color cover or set defaults
+  const parseSvgCover = (coverUrl: string) => {
+    if (coverUrl && coverUrl.startsWith('data:image/svg+xml;base64,')) {
+      try {
+        const base64Content = coverUrl.split(',')[1];
+        const decoded = decodeURIComponent(escape(atob(base64Content)));
+        const bgMatch = decoded.match(/rect[^>]*fill="([^"]+)"/);
+        const textMatch = decoded.match(/text[^>]*fill="([^"]+)"/);
+        return {
+          bgColor: bgMatch ? bgMatch[1] : '#6366f1',
+          textColor: textMatch ? textMatch[1] : '#ffffff'
+        };
+      } catch (e) {
+        console.error('Error parsing cover SVG:', e);
+      }
+    }
+    return { bgColor: '#6366f1', textColor: '#ffffff' };
+  };
+
+  const initialColors = editingTraining ? parseSvgCover(editingTraining.coverImage) : { bgColor: '#6366f1', textColor: '#ffffff' };
+  const [bgColor, setBgColor] = useState(initialColors.bgColor);
+  const [textColor, setTextColor] = useState(initialColors.textColor);
+
+  const [customCoverUrl, setCustomCoverUrl] = useState(() => {
+    if (!editingTraining) return '';
+    // If it starts with http or standard data:image (not svg), treat as custom upload
+    if (editingTraining.coverImage.startsWith('http') || 
+        (editingTraining.coverImage.startsWith('data:image/') && !editingTraining.coverImage.startsWith('data:image/svg+xml'))) {
+      return editingTraining.coverImage;
+    }
+    return '';
+  });
+
+  // Dynamic SVG Cover generator
+  const generateSvgCoverUrl = (bg: string, txt: string, courseType: string): string => {
+    const svgString = `
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 220" width="100%" height="100%">
+        <rect width="100%" height="100%" fill="${bg}" />
+        <g transform="translate(200, 110)">
+          <text 
+            text-anchor="middle" 
+            dominant-baseline="central" 
+            fill="${txt}" 
+            font-family="system-ui, -apple-system, sans-serif" 
+            font-weight="800" 
+            font-size="28" 
+            letter-spacing="2"
+          >${courseType.toUpperCase()}</text>
+        </g>
+      </svg>
+    `.trim();
+    
+    const base64 = btoa(unescape(encodeURIComponent(svgString)));
+    return `data:image/svg+xml;base64,${base64}`;
+  };
 
   // Course Types State
   const [courseTypes, setCourseTypes] = useState<CourseType[]>([]);
@@ -67,6 +190,10 @@ export default function CreateTrainingView({
   const [newTypeName, setNewTypeName] = useState('');
   const [newTypeDesc, setNewTypeDesc] = useState('');
   const [savingType, setSavingType] = useState(false);
+
+  // Derived category name
+  const matchedType = courseTypes.find((ct) => ct.id === selectedCourseTypeId);
+  const categoryName = matchedType ? matchedType.name : 'Geral';
 
   // PDF Upload Management state
   const [isUploadingPdf, setIsUploadingPdf] = useState(false);
@@ -101,6 +228,17 @@ export default function CreateTrainingView({
       })
       .catch((err) => console.error('Erro ao buscar questões do curso:', err));
   }, [courseId, selectedCourseTypeId, editingTraining]);
+
+  // Auto-updater for training type based on materials provided
+  useEffect(() => {
+    if (videoUrl) {
+      setType('Vídeo');
+    } else if (pdfUrl) {
+      setType('PDF');
+    } else {
+      setType('Interativo');
+    }
+  }, [videoUrl, pdfUrl]);
 
   // Helper to extract clean youtube embed url
   const getYouTubeEmbedUrl = (url: string): string | null => {
@@ -162,6 +300,75 @@ export default function CreateTrainingView({
     }
   };
 
+  // PDF Uploading for multiple materials list
+  const handlePdfUploadForMaterial = (materialId: string, e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.type !== 'application/pdf') {
+        alert('Selecione apenas arquivos PDF para materiais de apoio.');
+        return;
+      }
+      
+      setUploadingMaterialIds(prev => ({ ...prev, [materialId]: true }));
+      
+      const reader = new FileReader();
+      reader.onloadend = async () => {
+        try {
+          const base64Content = (reader.result as string).split(',')[1];
+          const data = await dbService.uploadFile(base64Content, file.name, 'application/pdf');
+          if (data && (data as any).publicUrl) {
+            const uploadedUrl = (data as any).publicUrl;
+            const uniquePhysName = uploadedUrl.split('/').pop() || file.name;
+            setMaterials(prev => prev.map(m => m.id === materialId ? { 
+              ...m, 
+              pdfUrl: uploadedUrl, 
+              title: file.name,
+              originalName: file.name,
+              physicalName: uniquePhysName,
+              path: uploadedUrl,
+              size: file.size,
+              mimeType: file.type || 'application/pdf',
+              courseId: courseId
+            } : m));
+            alert(`Arquivo "${file.name}" enviado com sucesso!`);
+          } else {
+            alert('Falha ao registrar PDF. Tente novamente.');
+          }
+        } catch (err) {
+          console.error(err);
+          alert('Erro no envio do material. Sincronizando como recurso offline.');
+        } finally {
+          setUploadingMaterialIds(prev => ({ ...prev, [materialId]: false }));
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleAddLesson = () => {
+    setLessons(prev => [...prev, { id: `lesson-${Date.now()}-${prev.length}`, title: '', videoUrl: '' }]);
+  };
+
+  const handleUpdateLesson = (id: string, field: 'title' | 'videoUrl', value: string) => {
+    setLessons(prev => prev.map(l => l.id === id ? { ...l, [field]: value } : l));
+  };
+
+  const handleRemoveLesson = (id: string) => {
+    setLessons(prev => prev.filter(l => l.id !== id));
+  };
+
+  const handleAddMaterial = () => {
+    setMaterials(prev => [...prev, { id: `material-${Date.now()}-${prev.length}`, title: '', pdfUrl: '' }]);
+  };
+
+  const handleUpdateMaterial = (id: string, field: 'title' | 'pdfUrl', value: string) => {
+    setMaterials(prev => prev.map(m => m.id === id ? { ...m, [field]: value } : m));
+  };
+
+  const handleRemoveMaterial = (id: string) => {
+    setMaterials(prev => prev.filter(m => m.id !== id));
+  };
+
   // Add/Submit new course type (tipos_curso)
   const handleCreateNewType = async () => {
     if (!newTypeName.trim()) return;
@@ -211,6 +418,12 @@ export default function CreateTrainingView({
   const handleUpdateQuestionText = (qId: string, val: string) => {
     setQuestions((prev) =>
       prev.map((q) => (q.id === qId ? { ...q, text: val } : q))
+    );
+  };
+
+  const handleUpdateQuestionExplanation = (qId: string, val: string) => {
+    setQuestions((prev) =>
+      prev.map((q) => (q.id === qId ? { ...q, explanation: val } : q))
     );
   };
 
@@ -341,7 +554,10 @@ export default function CreateTrainingView({
     const matchedType = courseTypes.find((ct) => ct.id === selectedCourseTypeId);
     const categoryName = matchedType ? matchedType.name : 'Geral';
 
-    let nextTrainings: Training[] = [];
+    const serializedDescription = serializeTrainingData(description, lessons, materials);
+
+    const firstVideoUrl = lessons[0]?.videoUrl || videoUrl || undefined;
+    const firstPdfUrl = materials[0]?.pdfUrl || pdfUrl || undefined;
 
     const finalCoursePayload: Training = {
       id: courseId,
@@ -351,12 +567,13 @@ export default function CreateTrainingView({
       viewsCount: editingTraining ? editingTraining.viewsCount : 0,
       type,
       status: editingTraining ? editingTraining.status : 'Publicado',
-      coverImage: customCoverUrl || selectedCover,
+      coverImage: customCoverUrl || generateSvgCoverUrl(bgColor, textColor, categoryName),
       updatedDate: new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' }),
-      description,
-      videoUrl: videoUrl || undefined,
-      pdfUrl: pdfUrl || undefined,
-      courseTypeId: selectedCourseTypeId || undefined
+      description: serializedDescription,
+      videoUrl: firstVideoUrl,
+      pdfUrl: firstPdfUrl,
+      courseTypeId: selectedCourseTypeId || undefined,
+      lessonsCount: lessons.length || 1
     };
 
     if (editingTraining) {
@@ -399,9 +616,9 @@ export default function CreateTrainingView({
         </button>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left Columns: Form Settings & Questions Blocks (2 Width) */}
-        <div className="lg:col-span-2 space-y-6">
+      <div className="max-w-4xl mx-auto space-y-6">
+        {/* Form Settings & Questions Blocks */}
+        <div className="space-y-6">
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* CARD 1: Core Course Information */}
             <div className="bg-white rounded-3xl border border-slate-250/80 p-6 shadow-sm space-y-5">
@@ -428,13 +645,13 @@ export default function CreateTrainingView({
                 {/* Course Type with Create Inline Block */}
                 <div className="space-y-1">
                   <div className="flex justify-between items-center">
-                    <label className="text-[10px] font-black uppercase text-slate-450 tracking-wider">Tipo do Curso</label>
+                    <label className="text-[10px] font-black uppercase text-slate-450 tracking-wider">Categoria / Trilha</label>
                     <button
                       type="button"
                       onClick={() => setShowNewTypeForm(!showNewTypeForm)}
-                      className="text-[10px] font-black text-indigo-600 hover:text-indigo-800 uppercase tracking-wider"
+                      className="text-[10px] font-black text-indigo-650 hover:text-indigo-850 uppercase tracking-wider"
                     >
-                      {showNewTypeForm ? 'Fechar Cadastro' : '+ Cadastrar Tipo'}
+                      {showNewTypeForm ? 'Fechar' : '+ Nova'}
                     </button>
                   </div>
                   <select
@@ -448,14 +665,14 @@ export default function CreateTrainingView({
                       </option>
                     ))}
                     {courseTypes.length === 0 && (
-                      <option value="">Nenhum tipo cadastrado</option>
+                      <option value="">Nenhuma categoria</option>
                     )}
                   </select>
 
                   {/* Inline micro-creation form */}
                   {showNewTypeForm && (
                     <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 space-y-3 mt-2 animate-fade-in">
-                      <h4 className="text-[10px] font-black text-slate-700 uppercase tracking-wider">Cadastrar Novo Tipo de Curso</h4>
+                      <h4 className="text-[10px] font-black text-slate-700 uppercase tracking-wider">Cadastrar Nova Categoria</h4>
                       <div className="space-y-2">
                         <input
                           type="text"
@@ -477,7 +694,7 @@ export default function CreateTrainingView({
                           disabled={savingType || !newTypeName}
                           className="px-3 py-1.5 bg-indigo-650 hover:bg-indigo-750 text-white font-bold text-[10px] uppercase rounded-lg transition"
                         >
-                          Salvar Tipo de Curso
+                          Salvar Categoria
                         </button>
                       </div>
                     </div>
@@ -498,61 +715,117 @@ export default function CreateTrainingView({
               </div>
 
               {/* Cover settings block */}
-              <div className="space-y-3">
-                <label className="text-[10px] font-black uppercase text-slate-450 tracking-wider block">Imagem de Capa do Treinamento</label>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-4">
+                <label className="text-[10px] font-black uppercase text-slate-450 tracking-wider block">Imagem de Capa ou Cor Customizada</label>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  
                   {/* Left: upload drag selector */}
-                  <div className="border-2 border-dashed border-slate-250 rounded-2xl p-4 bg-slate-50/20 hover:border-indigo-400 transition-all flex flex-col items-center justify-center text-center space-y-1 min-h-[110px]">
+                  <div className="space-y-3">
+                    <span className="text-[9px] font-black uppercase text-slate-400 tracking-wider">Carregar Arquivo</span>
+                    <div className="border-2 border-dashed border-slate-250 rounded-2xl p-4 bg-slate-50/20 hover:border-indigo-400 transition-all flex flex-col items-center justify-center text-center space-y-1 min-h-[120px]">
+                      {customCoverUrl ? (
+                        <div className="relative w-full h-24 rounded-lg overflow-hidden border border-slate-200">
+                          <img src={customCoverUrl} alt="Capa ativa" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                          <button
+                            type="button"
+                            onClick={() => setCustomCoverUrl('')}
+                            className="absolute top-1 right-1 px-1.5 py-0.5 bg-rose-600 hover:bg-rose-700 text-white font-extrabold text-[8px] uppercase rounded transition shadow-sm cursor-pointer"
+                          >
+                            Remover Imagem
+                          </button>
+                        </div>
+                      ) : (
+                        <label className="w-full h-full cursor-pointer flex flex-col items-center justify-center py-2">
+                          <Upload className="h-5 w-5 text-indigo-500 animate-pulse mb-1" />
+                          <span className="text-[11px] font-bold text-slate-700 block">Enviar Capa</span>
+                          <span className="text-[8px] text-slate-400 font-medium">PNG, JPG (Máx. 2MB)</span>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={handleCoverFileChange}
+                            className="hidden"
+                          />
+                        </label>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Right: Custom color configuration / Preview */}
+                  <div className="space-y-3">
+                    <span className="text-[9px] font-black uppercase text-slate-400 tracking-wider">
+                      {customCoverUrl ? 'Preview da Imagem' : 'Personalizar Capa por Cores'}
+                    </span>
+                    
                     {customCoverUrl ? (
-                      <div className="relative w-full h-20 rounded-lg overflow-hidden border border-slate-200">
-                        <img src={customCoverUrl} alt="Capa ativa" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-                        <button
-                          type="button"
-                          onClick={() => setCustomCoverUrl('')}
-                          className="absolute top-1 right-1 px-1.5 py-0.5 bg-rose-600 hover:bg-rose-700 text-white font-extrabold text-[8px] uppercase rounded"
-                        >
-                          Remover
-                        </button>
+                      <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 flex flex-col items-center justify-center text-center h-[120px] text-slate-400 text-xs font-semibold">
+                        A imagem acima será usada como capa do treinamento.
                       </div>
                     ) : (
-                      <label className="w-full h-full cursor-pointer flex flex-col items-center justify-center py-2">
-                        <Upload className="h-5 w-5 text-indigo-500 animate-pulse mb-1" />
-                        <span className="text-[11px] font-bold text-slate-700 block">Enviar Capa</span>
-                        <span className="text-[8px] text-slate-400 font-medium">PNG, JPG (Máx. 2MB)</span>
-                        <input
-                          type="file"
-                          accept="image/*"
-                          onChange={handleCoverFileChange}
-                          className="hidden"
-                        />
-                      </label>
+                      <div className="space-y-3 bg-slate-50/50 border border-slate-200 rounded-2xl p-4">
+                        {/* Live Cover Preview */}
+                        <div 
+                          style={{ backgroundColor: bgColor }} 
+                          className="h-24 w-full rounded-xl flex items-center justify-center transition-all border border-slate-200/80 shadow-inner relative overflow-hidden"
+                        >
+                          <span 
+                            style={{ color: textColor }} 
+                            className="font-sans font-black text-lg tracking-widest uppercase text-center px-4"
+                          >
+                            {categoryName}
+                          </span>
+                          <div className="absolute bottom-1 right-2 text-[8px] font-bold opacity-60" style={{ color: textColor }}>
+                            Pré-visualização
+                          </div>
+                        </div>
+
+                        {/* Presets and Custom Picker */}
+                        <div className="space-y-2">
+                          <div className="flex flex-wrap gap-1.5">
+                            {PRESET_COLORS.map((p) => (
+                              <button
+                                type="button"
+                                key={p.name}
+                                onClick={() => {
+                                  setBgColor(p.bg);
+                                  setTextColor(p.text);
+                                }}
+                                style={{ backgroundColor: p.bg }}
+                                title={p.name}
+                                className={`w-6 h-6 rounded-full border-2 cursor-pointer transition ${
+                                  bgColor === p.bg ? 'border-slate-800 scale-110 shadow-sm' : 'border-white hover:border-slate-300'
+                                }`}
+                              />
+                            ))}
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-3 pt-1">
+                            {/* Bg Color Picker */}
+                            <div className="flex items-center gap-2">
+                              <input
+                                type="color"
+                                value={bgColor}
+                                onChange={(e) => setBgColor(e.target.value)}
+                                className="w-6 h-6 rounded border border-slate-300 cursor-pointer p-0 bg-transparent"
+                              />
+                              <span className="text-[10px] font-bold text-slate-600">Cor de Fundo</span>
+                            </div>
+
+                            {/* Text Color Picker */}
+                            <div className="flex items-center gap-2">
+                              <input
+                                type="color"
+                                value={textColor}
+                                onChange={(e) => setTextColor(e.target.value)}
+                                className="w-6 h-6 rounded border border-slate-300 cursor-pointer p-0 bg-transparent"
+                              />
+                              <span className="text-[10px] font-bold text-slate-600">Cor da Fonte</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
                     )}
                   </div>
 
-                  {/* Stock covers */}
-                  <div className="grid grid-cols-2 gap-1.5">
-                    {STOCK_IMAGES.map((img) => {
-                      const isChosen = selectedCover === img.url && !customCoverUrl;
-                      return (
-                        <button
-                          type="button"
-                          key={img.id}
-                          onClick={() => {
-                            setSelectedCover(img.url);
-                            setCustomCoverUrl('');
-                          }}
-                          className={`relative h-[48px] rounded-xl overflow-hidden border-2 transition ${
-                            isChosen ? 'border-indigo-600' : 'border-transparent'
-                          }`}
-                        >
-                          <img src={img.url} alt={img.title} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-                          <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
-                            <span className="text-[8px] font-black text-white uppercase tracking-wider">{img.title}</span>
-                          </div>
-                        </button>
-                      );
-                    })}
-                  </div>
                 </div>
               </div>
 
@@ -570,107 +843,189 @@ export default function CreateTrainingView({
               </div>
             </div>
 
-            {/* CARD 2: Course Media Contents (Video and PDF) */}
-            <div className="bg-white rounded-3xl border border-slate-250/80 p-6 shadow-sm space-y-5">
-              <div className="flex items-center gap-2 border-b border-slate-100 pb-3">
-                <span className="p-1.5 bg-sky-50 text-sky-750 rounded-lg">
-                  <FolderOpen className="h-4.5 w-4.5" />
-                </span>
-                <h3 className="font-bold text-slate-800 text-sm">Conteúdos do Treinamento (Vídeo & PDF)</h3>
+             {/* CARD 2: Course Content Structure (Multiple Lessons and Materials) */}
+            <div className="bg-white rounded-3xl border border-slate-250/80 p-6 shadow-sm space-y-6">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                <div className="flex items-center gap-2">
+                  <span className="p-1.5 bg-sky-50 text-sky-750 rounded-lg">
+                    <FolderOpen className="h-4.5 w-4.5" />
+                  </span>
+                  <h3 className="font-bold text-slate-800 text-sm">Estrutura de Conteúdo do Treinamento</h3>
+                </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* PDF complementary material section */}
-                <div className="space-y-3 bg-slate-50 bg-opacity-70 p-4 rounded-2xl border border-slate-200 border-dashed">
-                  <div className="flex items-center gap-2">
-                    <span className="p-1.5 bg-sky-50 text-sky-600 rounded-md">
-                      <FileText className="h-4 w-4" />
-                    </span>
-                    <span className="text-[11px] font-black uppercase tracking-wider text-slate-700">Material de Apoio (PDF)</span>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                {/* Panel 1: Lessons List */}
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="p-1 bg-indigo-50 text-indigo-600 rounded">
+                        <Video className="h-3.5 w-3.5" />
+                      </span>
+                      <h4 className="text-[11px] font-black uppercase tracking-wider text-slate-700">Vídeo-aulas / Módulos ({lessons.length})</h4>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleAddLesson}
+                      className="flex items-center gap-1 py-1 px-2.5 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-750 font-bold text-[10px] uppercase transition"
+                    >
+                      <Plus className="h-3 w-3" />
+                      <span>Nova Aula</span>
+                    </button>
                   </div>
 
-                  <p className="text-[10px] text-slate-500 font-medium leading-relaxed">
-                    Suba apostilas e guias complementares para o aluno abrir junto ou ler ao final da aula. Salvo diretamente no Supabase Storage.
+                  <p className="text-[10px] text-slate-500 font-medium">
+                    Insira uma ou mais aulas com os respectivos títulos e links do YouTube correspondentes.
                   </p>
 
-                  {pdfUrl ? (
-                    <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3 flex flex-col gap-2">
-                      <div className="flex items-center gap-2 text-emerald-800 font-bold text-xs">
-                        <CheckCircle className="h-4 w-4 text-emerald-600" />
-                        <span className="truncate max-w-[200px]">{pdfFileName || 'Material complementar ativo.pdf'}</span>
+                  <div className="space-y-4">
+                    {lessons.length === 0 ? (
+                      <div className="py-6 text-center text-slate-400 font-bold text-[10px] border border-dashed border-slate-200 rounded-2xl bg-slate-50/40">
+                        Nenhuma aula adicionada. Clique em "Nova Aula" para criar a grade técnica!
                       </div>
-                      <div className="flex gap-2">
-                        <a
-                          href={pdfUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="px-2.5 py-1 bg-white border border-emerald-305 text-emerald-800 font-extrabold text-[10px] uppercase rounded-lg hover:bg-emerald-100 transition"
-                        >
-                          Visualizar Material
-                        </a>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setPdfUrl('');
-                            setPdfFileName('');
-                          }}
-                          className="px-2 py-1 bg-rose-50 border border-rose-200 text-rose-700 font-extrabold text-[9px] uppercase rounded-lg hover:bg-rose-100 transition"
-                        >
-                          Remover
-                        </button>
-                      </div>
-                    </div>
-                  ) : (
-                    <div>
-                      <label className="flex flex-col items-center justify-center border-2 border-dashed border-sky-200 rounded-xl py-4 bg-white hover:border-indigo-400 transition cursor-pointer">
-                        <Upload className={`h-5 w-5 text-sky-500 mb-1 ${isUploadingPdf ? 'animate-spin' : ''}`} />
-                        <span className="text-[10px] font-bold text-slate-700">
-                          {isUploadingPdf ? 'Enviando ao Supabase...' : 'Escolher Arquivo PDF'}
-                        </span>
-                        <input
-                          type="file"
-                          accept=".pdf"
-                          onChange={handlePdfUpload}
-                          className="hidden"
-                          disabled={isUploadingPdf}
-                        />
-                      </label>
-                    </div>
-                  )}
+                    ) : (
+                      lessons.map((ls, index) => (
+                        <div key={ls.id} className="bg-slate-50 bg-opacity-70 p-4 rounded-2xl border border-slate-200 space-y-3 relative">
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveLesson(ls.id)}
+                            className="absolute top-3 right-3 text-slate-400 hover:text-rose-500 transition"
+                            title="Remover Aula"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+
+                          <div className="space-y-1 pr-6">
+                            <span className="text-[9px] font-black uppercase text-indigo-605 tracking-wider">Aula {index + 1}</span>
+                            <input
+                              type="text"
+                              required
+                              value={ls.title}
+                              onChange={(e) => handleUpdateLesson(ls.id, 'title', e.target.value)}
+                              placeholder="Título da Aula (Ex: Apresentação da Arquitetura)"
+                              className="w-full text-xs font-bold px-3 py-1.5 border border-slate-200 bg-white rounded-xl focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                            />
+                          </div>
+
+                          <div className="space-y-1">
+                            <label className="text-[9px] font-bold text-slate-500 uppercase">Link do Vídeo (YouTube)</label>
+                            <input
+                              type="url"
+                              required
+                              value={ls.videoUrl}
+                              onChange={(e) => handleUpdateLesson(ls.id, 'videoUrl', e.target.value)}
+                              placeholder="https://www.youtube.com/watch?v=..."
+                              className="w-full text-xs font-semibold px-3 py-1.5 border border-slate-200 bg-white rounded-xl focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                            />
+                          </div>
+
+                          {ls.videoUrl && getYouTubeEmbedUrl(ls.videoUrl) && (
+                            <div className="aspect-video w-full rounded-lg overflow-hidden border border-slate-200 bg-black">
+                              <iframe
+                                src={getYouTubeEmbedUrl(ls.videoUrl) || ''}
+                                title={`YouTube preview ${index}`}
+                                frameBorder="0"
+                                allowFullScreen
+                                className="w-full h-full"
+                              />
+                            </div>
+                          )}
+                        </div>
+                      ))
+                    )}
+                  </div>
                 </div>
 
-                {/* YouTube Link Integration */}
-                <div className="space-y-3 bg-slate-50 bg-opacity-70 p-4 rounded-2xl border border-slate-200 border-dashed">
-                  <div className="flex items-center gap-2">
-                    <span className="p-1.5 bg-rose-50 text-rose-600 rounded-md">
-                      <Video className="h-4 w-4" />
-                    </span>
-                    <span className="text-[11px] font-black uppercase tracking-wider text-slate-700">Vídeo-aula do Treinamento</span>
+                {/* Panel 2: Materials List */}
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="p-1 bg-sky-50 text-sky-600 rounded">
+                        <FileText className="h-3.5 w-3.5" />
+                      </span>
+                      <h4 className="text-[11px] font-black uppercase tracking-wider text-slate-700">Materiais de Apoio (PDFs) ({materials.length})</h4>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleAddMaterial}
+                      className="flex items-center gap-1 py-1 px-2.5 rounded-lg bg-sky-50 hover:bg-sky-100 text-sky-750 font-bold text-[10px] uppercase transition"
+                    >
+                      <Plus className="h-3 w-3" />
+                      <span>Nova Apostila</span>
+                    </button>
                   </div>
 
-                  <p className="text-[10px] text-slate-500 font-medium leading-relaxed">
-                    Insira a URL de um vídeo do YouTube. Caso fornecido, o aluno visualizará o player incorporado durante o curso.
+                  <p className="text-[10px] text-slate-500 font-medium">
+                    Adicione guias práticos, apostilas e documentações complementares em PDF para o aprendizado.
                   </p>
 
-                  <input
-                    type="url"
-                    value={videoUrl}
-                    onChange={(e) => setVideoUrl(e.target.value)}
-                    placeholder="https://www.youtube.com/watch?v=..."
-                    className="w-full text-xs font-semibold px-3 py-2 rounded-xl border border-slate-200 focus:ring-1 focus:ring-indigo-500 focus:outline-none bg-white"
-                  />
+                  <div className="space-y-4">
+                    {materials.length === 0 ? (
+                      <div className="py-6 text-center text-slate-400 font-bold text-[10px] border border-dashed border-slate-200 rounded-2xl bg-slate-50/40">
+                        Nenhuma apostila ou PDF anexado. Clique em "Nova Apostila" para incluir materiais extras de apoio!
+                      </div>
+                    ) : (
+                      materials.map((mat, index) => (
+                        <div key={mat.id} className="bg-slate-50 bg-opacity-70 p-4 rounded-2xl border border-slate-200 space-y-3 relative">
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveMaterial(mat.id)}
+                            className="absolute top-3 right-3 text-slate-400 hover:text-rose-500 transition"
+                            title="Remover Apostila"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
 
-                  {videoUrl && getYouTubeEmbedUrl(videoUrl) && (
-                    <div className="aspect-video w-full rounded-lg overflow-hidden border border-slate-200 bg-black">
-                      <iframe
-                        src={getYouTubeEmbedUrl(videoUrl) || ''}
-                        title="YouTube preview"
-                        frameBorder="0"
-                        allowFullScreen
-                        className="w-full h-full"
-                      />
-                    </div>
-                  )}
+                          <div className="space-y-1 pr-6">
+                            <span className="text-[9px] font-black uppercase text-sky-700 tracking-wider">Apostila {index + 1}</span>
+                            <input
+                              type="text"
+                              required
+                              value={mat.title}
+                              onChange={(e) => handleUpdateMaterial(mat.id, 'title', e.target.value)}
+                              placeholder="Título do Documento (Ex: Guia Prático de Implementação)"
+                              className="w-full text-xs font-bold px-3 py-1.5 border border-slate-200 bg-white rounded-xl focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                            />
+                          </div>
+
+                          <div className="space-y-1.5">
+                            <label className="text-[9px] font-bold text-slate-500 uppercase block">Arquivo PDF do Material</label>
+                            {mat.pdfUrl ? (
+                              <div className="bg-emerald-50 border border-emerald-150 rounded-xl p-2.5 flex items-center justify-between">
+                                <span className="text-[10px] text-emerald-800 font-bold truncate max-w-[180px]">
+                                  {mat.title.toLowerCase().endsWith('.pdf') ? mat.title : `${mat.title}.pdf`}
+                                </span>
+                                <a
+                                  href={mat.pdfUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-[9px] font-black text-emerald-700 hover:underline shrink-0"
+                                >
+                                  Ver PDF
+                                </a>
+                              </div>
+                            ) : (
+                              <div>
+                                <label className="flex flex-col items-center justify-center border-2 border-dashed border-sky-100 rounded-xl py-3.5 bg-white hover:border-indigo-400 transition cursor-pointer">
+                                  <Upload className={`h-4 w-4 text-sky-500 mb-0.5 ${uploadingMaterialIds[mat.id] ? 'animate-spin' : ''}`} />
+                                  <span className="text-[9px] font-bold text-slate-700">
+                                    {uploadingMaterialIds[mat.id] ? 'Carregando ao Supabase...' : 'Carregar Apostila PDF'}
+                                  </span>
+                                  <input
+                                    type="file"
+                                    accept=".pdf"
+                                    onChange={(e) => handlePdfUploadForMaterial(mat.id, e)}
+                                    className="hidden"
+                                    disabled={!!uploadingMaterialIds[mat.id]}
+                                  />
+                                </label>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
@@ -728,58 +1083,103 @@ export default function CreateTrainingView({
                       </div>
 
                       {/* Alternatives Sub-List */}
-                      <div className="space-y-2.5">
+                      <div className="space-y-3">
                         <div className="flex justify-between items-center">
-                          <span className="text-[8px] font-black text-slate-450 uppercase tracking-widest">Alternativas e Seleção de Resposta Correta</span>
+                          <div className="space-y-0.5">
+                            <span className="text-[10px] font-black text-slate-800 uppercase tracking-wide block">Gabarito e Alternativas de Resposta</span>
+                            <span className="text-[9px] text-slate-450 block">Selecione o seletor ou clique no badge para definir qual é a resposta correta da avaliação.</span>
+                          </div>
                           <button
                             type="button"
                             onClick={() => handleAddAlternative(q.id)}
-                            className="text-[9px] font-black text-indigo-600 hover:text-indigo-800 uppercase tracking-wider"
+                            className="text-[10px] font-black text-indigo-650 hover:text-indigo-850 bg-indigo-50 hover:bg-indigo-100 px-2.5 py-1 rounded-lg uppercase tracking-wider transition"
                           >
                             + Adicionar Alternativa
                           </button>
                         </div>
 
                         <div className="space-y-2">
-                          {q.alternatives.map((alt) => (
-                            <div
-                              key={alt.id}
-                              className="flex items-center gap-3 bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs"
-                            >
-                              {/* Selection choice radio box */}
-                              <label className="flex items-center cursor-pointer shrink-0">
+                          {q.alternatives.map((alt, altIdx) => {
+                            const optLetter = String.fromCharCode(65 + altIdx); // A, B, C, D...
+                            return (
+                              <div
+                                key={alt.id}
+                                className={`flex items-center gap-3 border rounded-xl px-3 py-2 text-xs transition duration-200 ${
+                                  alt.isCorrect
+                                    ? 'border-emerald-500 bg-emerald-50/20 shadow-sm shadow-emerald-500/5'
+                                    : 'border-slate-200 hover:border-slate-350 bg-white'
+                                }`}
+                              >
+                                {/* Option Letter Indicator */}
+                                <span className={`text-[10px] font-black w-5 h-5 rounded-full flex items-center justify-center ${
+                                  alt.isCorrect ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-500'
+                                }`}>
+                                  {optLetter}
+                                </span>
+
+                                {/* Selection choice radio box */}
+                                <label className="flex items-center cursor-pointer shrink-0">
+                                  <input
+                                    type="radio"
+                                    name={`correct_${q.id}`}
+                                    checked={alt.isCorrect}
+                                    onChange={() => handleSetCorrectAlternative(q.id, alt.id)}
+                                    className="h-4 w-4 text-emerald-600 border-slate-300 focus:ring-emerald-500 focus:outline-none cursor-pointer"
+                                  />
+                                  <span className="sr-only">Correta</span>
+                                </label>
+
+                                {/* Input value */}
                                 <input
-                                  type="radio"
-                                  name={`correct_${q.id}`}
-                                  checked={alt.isCorrect}
-                                  onChange={() => handleSetCorrectAlternative(q.id, alt.id)}
-                                  className="h-4 w-4 text-indigo-600 border-slate-300 focus:ring-indigo-500 focus:outline-none cursor-pointer"
+                                  type="text"
+                                  required
+                                  value={alt.text}
+                                  onChange={(e) => handleUpdateAlternativeText(q.id, alt.id, e.target.value)}
+                                  placeholder="Texto da alternativa..."
+                                  className={`flex-1 text-xs border-0 bg-transparent py-0.5 focus:ring-0 focus:outline-none font-semibold ${
+                                    alt.isCorrect ? 'text-emerald-950' : 'text-slate-700'
+                                  }`}
                                 />
-                                <span className="sr-only">Correta</span>
-                              </label>
 
-                              {/* Input value */}
-                              <input
-                                type="text"
-                                required
-                                value={alt.text}
-                                onChange={(e) => handleUpdateAlternativeText(q.id, alt.id, e.target.value)}
-                                placeholder="Texto da alternativa..."
-                                className="flex-1 text-xs border-0 bg-transparent py-0.5 focus:ring-0 focus:outline-none font-semibold text-slate-700"
-                              />
-
-                              {/* Remove button option */}
-                              {q.alternatives.length > 1 && (
+                                {/* Badge: Correct vs. Distractor Toggle */}
                                 <button
                                   type="button"
-                                  onClick={() => handleRemoveAlternative(q.id, alt.id)}
-                                  className="text-slate-300 hover:text-rose-500 transition shrink-0"
+                                  onClick={() => handleSetCorrectAlternative(q.id, alt.id)}
+                                  className={`text-[9px] font-black uppercase px-2 py-1 rounded-md tracking-wider transition-all duration-200 cursor-pointer shrink-0 ${
+                                    alt.isCorrect
+                                      ? 'bg-emerald-600 text-white'
+                                      : 'bg-slate-100 text-slate-400 hover:bg-emerald-55 hover:text-emerald-700'
+                                  }`}
                                 >
-                                  <Trash2 className="h-3.5 w-3.5" />
+                                  {alt.isCorrect ? 'Correta (Gabarito)' : 'Opção Errada'}
                                 </button>
-                              )}
-                            </div>
-                          ))}
+
+                                {/* Remove button option */}
+                                {q.alternatives.length > 1 && (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleRemoveAlternative(q.id, alt.id)}
+                                    className="text-slate-300 hover:text-rose-500 transition shrink-0 p-1"
+                                    title="Remover opção"
+                                  >
+                                    <Trash2 className="h-3.5 w-3.5" />
+                                  </button>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+
+                        {/* Optional explanation input */}
+                        <div className="pt-1.5 border-t border-dashed border-slate-200/60">
+                          <label className="text-[9px] font-black text-slate-400 uppercase tracking-wider block mb-1">Explicação / Comentário da Questão (Mostrada ao aluno após responder)</label>
+                          <input
+                            type="text"
+                            value={q.explanation || ''}
+                            onChange={(e) => handleUpdateQuestionExplanation(q.id, e.target.value)}
+                            placeholder="Ex: A resposta correta é a B pois a escuta ativa garante a imparcialidade e a mediação..."
+                            className="w-full text-[11px] font-medium px-3.5 py-2 border border-slate-200 bg-white rounded-xl focus:outline-none focus:ring-1 focus:ring-indigo-500 text-slate-650"
+                          />
                         </div>
                       </div>
                     </div>
@@ -788,70 +1188,18 @@ export default function CreateTrainingView({
               </div>
             </div>
 
+            <div className="bg-slate-50 border border-slate-100 rounded-xl p-3 text-[10px] text-slate-400 font-bold flex gap-2">
+              <AlertCircle className="h-4.5 w-4.5 text-slate-400 shrink-0 mt-0.5" />
+              <span>Qualquer alteração ou nova publicação é sincronizada com o Supabase e os painéis de colaboradores imediatamente.</span>
+            </div>
+
             <button
               type="submit"
-              className="w-full py-3 bg-slate-900 border border-slate-900 text-white rounded-xl text-xs font-bold hover:bg-slate-800 transition tracking-wide uppercase shadow"
+              className="w-full py-3 bg-slate-900 border border-slate-900 text-white rounded-xl text-xs font-bold hover:bg-slate-800 transition tracking-wide uppercase shadow cursor-pointer"
             >
               {editingTraining ? 'Salvar Alterações e Prova Técnica' : 'Publicar Curso no Catálogo'}
             </button>
           </form>
-        </div>
-
-        {/* Right Column: AI Outline generation assistance */}
-        <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm flex flex-col justify-between space-y-6 max-h-[580px] lg:sticky lg:top-4">
-          <div className="space-y-4">
-            <div className="flex items-center gap-2">
-              <span className="p-1.5 bg-indigo-50 text-indigo-650 rounded-lg">
-                <Sparkles className="h-4 w-4" />
-              </span>
-              <h3 className="font-extrabold text-slate-800 text-sm">Estruturação por IA</h3>
-            </div>
-
-            <p className="text-xs text-slate-500 leading-relaxed font-semibold">
-              Adicione o **Título** e o **Tipo de Curso** nas seções ao lado, e consulte nosso serviço inteligente do Gemini para obter durações e outlines de forma automática.
-            </p>
-
-            <button
-              type="button"
-              onClick={handleGenerateAISuggestions}
-              disabled={aiLoading}
-              className="w-full py-2.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-600 border border-indigo-100 text-xs font-bold transition flex items-center justify-center gap-2"
-            >
-              <Sparkles className={`h-4 w-4 ${aiLoading ? 'animate-spin' : ''}`} />
-              <span>{aiLoading ? 'Estruturando...' : 'Obter Outline Gemini'}</span>
-            </button>
-
-            {aiSuggestions && (
-              <div className="bg-slate-50 border border-slate-100 p-3.5 rounded-xl text-xs text-slate-600 space-y-2 animate-fade-in max-h-56 overflow-y-auto">
-                <div>
-                  <span className="text-[9px] uppercase font-black text-slate-455">Tempo:</span>
-                  <p className="font-bold text-slate-800">{aiSuggestions.duration}</p>
-                </div>
-                <div>
-                  <span className="text-[9px] uppercase font-black text-slate-455">Público:</span>
-                  <p className="text-slate-600">{aiSuggestions.audience}</p>
-                </div>
-                <div>
-                  <span className="text-[9px] uppercase font-black text-slate-455">Outline:</span>
-                  <pre className="text-[9px] bg-slate-900 text-slate-100 p-2 rounded-lg font-mono overflow-auto whitespace-pre-wrap">
-                    {aiSuggestions.outline}
-                  </pre>
-                </div>
-                <button
-                  type="button"
-                  onClick={handleApplyAISuggestions}
-                  className="w-full py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-[9px] uppercase rounded-lg transition"
-                >
-                  Mesclar Ementas ao Curso
-                </button>
-              </div>
-            )}
-          </div>
-
-          <div className="bg-slate-50 border border-slate-100 rounded-xl p-3 text-[10px] text-slate-400 font-bold flex gap-2">
-            <AlertCircle className="h-4.5 w-4.5 text-slate-400 shrink-0 mt-0.5" />
-            <span>Qualquer alteração ou nova publicação é sincronizada com o Supabase e os painéis de colaboradores imediatamente.</span>
-          </div>
         </div>
       </div>
     </div>

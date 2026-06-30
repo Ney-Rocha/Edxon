@@ -8,7 +8,9 @@ import {
   Video,
   FileText,
   Search,
-  BookOpen
+  BookOpen,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 import { Training, RecentActivity, User, SystemLog } from '../types';
 import { UI_IMAGES } from '../data';
@@ -29,6 +31,12 @@ export default function DashboardView({
   setView
 }: DashboardViewProps) {
   const [searchTerm, setSearchTerm] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 5;
+
+  const totalPages = Math.ceil(recentActivities.length / itemsPerPage) || 1;
+  const activePage = currentPage > totalPages ? totalPages : currentPage;
+  const paginatedActivities = recentActivities.slice((activePage - 1) * itemsPerPage, activePage * itemsPerPage);
 
   // Calculate statistics dynamically
   const publishedCount = trainings.filter((t) => t.status === 'Publicado').length;
@@ -285,7 +293,7 @@ export default function DashboardView({
                   Nenhuma atividade registrada ainda. Conclua treinamentos na visão do colaborador para gerar logs dinâmicos!
                 </div>
               ) : (
-                recentActivities.slice(0, 5).map((act) => (
+                paginatedActivities.map((act) => (
                   <div key={act.id} className="flex gap-3 hover:bg-slate-50/50 p-2 rounded-xl transition-colors">
                     <img
                       src={act.user?.avatar || UI_IMAGES.ricardoSilva}
@@ -315,6 +323,31 @@ export default function DashboardView({
                 ))
               )}
             </div>
+
+            {/* Pagination Controls */}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-between mt-5 pt-4 border-t border-slate-100">
+                <button
+                  disabled={activePage === 1}
+                  onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                  className="p-1.5 rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50 disabled:opacity-30 disabled:hover:bg-transparent transition cursor-pointer flex items-center justify-center"
+                  title="Anterior"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </button>
+                <span className="text-[11px] font-bold text-slate-500">
+                  Página {activePage} de {totalPages}
+                </span>
+                <button
+                  disabled={activePage === totalPages}
+                  onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                  className="p-1.5 rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50 disabled:opacity-30 disabled:hover:bg-transparent transition cursor-pointer flex items-center justify-center"
+                  title="Próximo"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </button>
+              </div>
+            )}
           </div>
 
           <button

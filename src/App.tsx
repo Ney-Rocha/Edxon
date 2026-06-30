@@ -69,16 +69,20 @@ export default function App() {
         ]);
 
         if (Array.isArray(usersData)) {
-          setUsers(Array.from(new Map(usersData.map(u => [u.id, u])).values()));
+          const valid = usersData.filter((u: any) => u && u.id);
+          setUsers(Array.from(new Map(valid.map((u: any) => [u.id, u])).values()));
         }
         if (Array.isArray(trainingsData)) {
-          setTrainings(Array.from(new Map(trainingsData.map(t => [t.id, t])).values()));
+          const valid = trainingsData.filter((t: any) => t && t.id);
+          setTrainings(Array.from(new Map(valid.map((t: any) => [t.id, t])).values()));
         }
         if (Array.isArray(activitiesData)) {
-          setRecentActivities(Array.from(new Map(activitiesData.map(a => [a.id, a])).values()));
+          const valid = activitiesData.filter((a: any) => a && a.id);
+          setRecentActivities(Array.from(new Map(valid.map((a: any) => [a.id, a])).values()));
         }
         if (Array.isArray(logsData)) {
-          setSystemLogs(Array.from(new Map(logsData.map(l => [l.id, l])).values()));
+          const valid = logsData.filter((l: any) => l && l.id);
+          setSystemLogs(Array.from(new Map(valid.map((l: any) => [l.id, l])).values()));
         }
       } else {
         showSyncToast(res.message || "Erro ao limpar bancos de dados.", "error");
@@ -106,16 +110,20 @@ export default function App() {
         ]);
 
         if (Array.isArray(usersData)) {
-          setUsers(Array.from(new Map(usersData.map(u => [u.id, u])).values()));
+          const valid = usersData.filter((u: any) => u && u.id);
+          setUsers(Array.from(new Map(valid.map((u: any) => [u.id, u])).values()));
         }
         if (Array.isArray(trainingsData)) {
-          setTrainings(Array.from(new Map(trainingsData.map(t => [t.id, t])).values()));
+          const valid = trainingsData.filter((t: any) => t && t.id);
+          setTrainings(Array.from(new Map(valid.map((t: any) => [t.id, t])).values()));
         }
         if (Array.isArray(activitiesData)) {
-          setRecentActivities(Array.from(new Map(activitiesData.map(a => [a.id, a])).values()));
+          const valid = activitiesData.filter((a: any) => a && a.id);
+          setRecentActivities(Array.from(new Map(valid.map((a: any) => [a.id, a])).values()));
         }
         if (Array.isArray(logsData)) {
-          setSystemLogs(Array.from(new Map(logsData.map(l => [l.id, l])).values()));
+          const valid = logsData.filter((l: any) => l && l.id);
+          setSystemLogs(Array.from(new Map(valid.map((l: any) => [l.id, l])).values()));
         }
       } catch (err) {
         console.error("Error communicating with integration backend:", err);
@@ -279,7 +287,8 @@ export default function App() {
         });
       }
 
-      const uniqueNext = Array.from(new Map(nextValue.map((u: any) => [u.id, u])).values()) as User[];
+      const validNext = Array.isArray(nextValue) ? nextValue.filter((u: any) => u && u.id) : [];
+      const uniqueNext = Array.from(new Map(validNext.map((u: any) => [u.id, u])).values()) as User[];
       return uniqueNext;
     });
   };
@@ -412,7 +421,8 @@ export default function App() {
         });
       }
 
-      const uniqueNext = Array.from(new Map(nextValue.map((t: any) => [t.id, t])).values()) as Training[];
+      const validNext = Array.isArray(nextValue) ? nextValue.filter((t: any) => t && t.id) : [];
+      const uniqueNext = Array.from(new Map(validNext.map((t: any) => [t.id, t])).values()) as Training[];
       return uniqueNext;
     });
   };
@@ -430,7 +440,8 @@ export default function App() {
         }
       }
 
-      const uniqueNext = Array.from(new Map(nextValue.map((a: any) => [a.id, a])).values()) as RecentActivity[];
+      const validNext = Array.isArray(nextValue) ? nextValue.filter((a: any) => a && a.id) : [];
+      const uniqueNext = Array.from(new Map(validNext.map((a: any) => [a.id, a])).values()) as RecentActivity[];
       return uniqueNext;
     });
   };
@@ -837,6 +848,7 @@ export default function App() {
 
   // Sync details from edits/deletions made by Admin back to student lists
   useEffect(() => {
+    if (!trainings || trainings.length === 0) return;
     setStudentAvailableCourses((prev) => {
       return prev
         .map((av) => {
@@ -913,11 +925,13 @@ export default function App() {
     };
 
     setRecentActivities(prev => {
-      const next = [act, ...prev];
+      const filteredPrev = Array.isArray(prev) ? prev.filter((a): a is RecentActivity => !!a && typeof a === 'object' && 'id' in a) : [];
+      const next = [act, ...filteredPrev];
       return Array.from(new Map(next.map(a => [a.id, a])).values());
     });
     setSystemLogs(prev => {
-      const next = [sysLog, ...prev];
+      const filteredPrev = Array.isArray(prev) ? prev.filter((l): l is SystemLog => !!l && typeof l === 'object' && 'id' in l) : [];
+      const next = [sysLog, ...filteredPrev];
       return Array.from(new Map(next.map(l => [l.id, l])).values());
     });
 
@@ -970,11 +984,13 @@ export default function App() {
       };
 
       setRecentActivities(prev => {
-        const next = [act, ...prev];
+        const filteredPrev = Array.isArray(prev) ? prev.filter((a): a is RecentActivity => !!a && typeof a === 'object' && 'id' in a) : [];
+        const next = [act, ...filteredPrev];
         return Array.from(new Map(next.map(a => [a.id, a])).values());
       });
       setSystemLogs(prev => {
-        const next = [sysLog, ...prev];
+        const filteredPrev = Array.isArray(prev) ? prev.filter((l): l is SystemLog => !!l && typeof l === 'object' && 'id' in l) : [];
+        const next = [sysLog, ...filteredPrev];
         return Array.from(new Map(next.map(l => [l.id, l])).values());
       });
 
@@ -1003,11 +1019,13 @@ export default function App() {
       };
 
       setRecentActivities(prev => {
-        const next = [act, ...prev];
+        const filteredPrev = Array.isArray(prev) ? prev.filter((a): a is RecentActivity => !!a && typeof a === 'object' && 'id' in a) : [];
+        const next = [act, ...filteredPrev];
         return Array.from(new Map(next.map(a => [a.id, a])).values());
       });
       setSystemLogs(prev => {
-        const next = [sysLog, ...prev];
+        const filteredPrev = Array.isArray(prev) ? prev.filter((l): l is SystemLog => !!l && typeof l === 'object' && 'id' in l) : [];
+        const next = [sysLog, ...filteredPrev];
         return Array.from(new Map(next.map(l => [l.id, l])).values());
       });
 
@@ -1054,11 +1072,13 @@ export default function App() {
     };
 
     setRecentActivities(prev => {
-      const next = [act, ...prev];
+      const filteredPrev = Array.isArray(prev) ? prev.filter((a): a is RecentActivity => !!a && typeof a === 'object' && 'id' in a) : [];
+      const next = [act, ...filteredPrev];
       return Array.from(new Map(next.map(a => [a.id, a])).values());
     });
     setSystemLogs(prev => {
-      const next = [sysLog, ...prev];
+      const filteredPrev = Array.isArray(prev) ? prev.filter((l): l is SystemLog => !!l && typeof l === 'object' && 'id' in l) : [];
+      const next = [sysLog, ...filteredPrev];
       return Array.from(new Map(next.map(l => [l.id, l])).values());
     });
 
@@ -1149,6 +1169,7 @@ export default function App() {
             course={selectedCourseForLesson}
             onBack={() => setView('student-dashboard')}
             onUpdateProgress={handleUpdateStudentProgress}
+            onGoToQuiz={() => setView('student-quiz')}
           />
         );
       case 'student-quiz':

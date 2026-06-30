@@ -51,6 +51,13 @@ export function isSupabaseConfigured(): boolean {
   return isConfigured;
 }
 
+export function isTableMissingError(error: any): boolean {
+  if (!error) return false;
+  if (error.code === "42P01" || error.code?.startsWith("PGRST")) return true;
+  const msg = (error.message || "").toLowerCase();
+  return msg.includes("could not find the table") || msg.includes("does not exist") || msg.includes("relation") || msg.includes("schema cache");
+}
+
 // ==========================================
 // USER CRUD OPERATIONS
 // ==========================================
@@ -534,11 +541,15 @@ export async function getCourseTypes(): Promise<CourseType[]> {
     }
     // Seed
     for (const ct of localCourseTypes) {
-      await client.from("tipos_curso").insert({
+      const { error: seedErr } = await client.from("tipos_curso").insert({
         id: ct.id,
         nome: ct.name,
         descricao: ct.description
       });
+      if (seedErr && isTableMissingError(seedErr)) {
+        console.log("[Supabase] Table 'tipos_curso' does not exist in schema. Skipping seed.");
+        return localCourseTypes;
+      }
     }
     return localCourseTypes;
   } catch (err) {
@@ -564,7 +575,13 @@ export async function upsertCourseType(ct: CourseType): Promise<CourseType> {
       nome: ct.name,
       descricao: ct.description
     });
-    if (error) throw error;
+    if (error) {
+      if (isTableMissingError(error)) {
+        console.log("[Supabase] Table 'tipos_curso' does not exist in schema. Skipping database save.");
+        return ct;
+      }
+      throw error;
+    }
   } catch (err) {
     handleAndLogDbError("upsertCourseType", err);
   }
@@ -589,7 +606,7 @@ export async function getQuestions(courseId?: string): Promise<Question[]> {
     }
     const { data: qData, error: qError } = await qQuery;
     if (qError) {
-      if (qError.code === "42P01") {
+      if (isTableMissingError(qError)) {
         console.warn("[Supabase] Table 'questoes' not found. Falling back to memory questions.");
         return courseId ? localQuestions.filter(q => q.courseId === courseId) : localQuestions;
       }
@@ -601,18 +618,27 @@ export async function getQuestions(courseId?: string): Promise<Question[]> {
       if (courseId === "t1" || !courseId) {
         // Seed default questions
         for (const q of localQuestions) {
-          await client.from("questoes").upsert({
+          const { error: insQErr } = await client.from("questoes").upsert({
             id: q.id,
             curso_id: q.courseId,
             enunciado: q.text
           });
+          if (insQErr && isTableMissingError(insQErr)) {
+            console.log("[Supabase] Table 'questoes' does not exist in schema. Skipping seed.");
+            return courseId ? localQuestions.filter(q => q.courseId === courseId) : localQuestions;
+          }
+
           for (const alt of q.alternatives) {
-            await client.from("alternativas").upsert({
+            const { error: insAErr } = await client.from("alternativas").upsert({
               id: alt.id,
               questao_id: q.id,
               texto: alt.text,
               correta: alt.isCorrect
             });
+            if (insAErr && isTableMissingError(insAErr)) {
+              console.log("[Supabase] Table 'alternativas' does not exist in schema. Skipping seed.");
+              return courseId ? localQuestions.filter(q => q.courseId === courseId) : localQuestions;
+            }
           }
         }
         return courseId ? localQuestions.filter(q => q.courseId === courseId) : localQuestions;
@@ -639,7 +665,8 @@ export async function getQuestions(courseId?: string): Promise<Question[]> {
         id: row.id,
         courseId: row.curso_id || row.courseId,
         text: row.enunciado || row.text,
-        alternatives: alternativesList
+        alternatives: alternativesList,
+        explanation: row.explicacao || row.explanation
       });
     }
 
@@ -658,8 +685,23 @@ export async function saveCourseQuestions(courseId: string, questions: Question[
   if (!client) return true;
 
   try {
+    // Check if the 'questoes' table exists first to avoid unnecessary failures/error logs
+    const { error: testErr } = await client.from("questoes").select("id").limit(1);
+    if (testErr && isTableMissingError(testErr)) {
+      console.log("[Supabase] Table 'questoes' does not exist in schema. Skipping database save, keeping in-memory.");
+      return true;
+    }
+
     // 1. Delete existing options for these questions
     const existingQOfCourse = await client.from("questoes").select("id").eq("curso_id", courseId);
+    if (existingQOfCourse.error) {
+      const qErr = existingQOfCourse.error;
+      if (isTableMissingError(qErr)) {
+        console.log("[Supabase] Table 'questoes' does not exist in schema. Skipping database save, keeping in-memory.");
+        return true;
+      }
+    }
+
     if (existingQOfCourse.data && existingQOfCourse.data.length > 0) {
       const oldIds = existingQOfCourse.data.map((r: any) => r.id);
       await client.from("alternativas").delete().in("questao_id", oldIds);
@@ -671,21 +713,29 @@ export async function saveCourseQuestions(courseId: string, questions: Question[
       const { error: qErr } = await client.from("questoes").insert({
         id: q.id,
         curso_id: courseId,
-        enunciado: q.text
+        enunciado: q.text,
+        explicacao: q.explanation
       });
       if (qErr) {
-        // Fallback for column errors or mismatch
+        if (isTableMissingError(qErr)) {
+          console.log("[Supabase] Table 'questoes' does not exist in schema. Skipping database save, keeping in-memory.");
+          return true;
+        }
         console.warn("[Supabase] Failed inserting question, trying fallback:", qErr.message);
         continue;
       }
 
       for (const alt of q.alternatives) {
-        await client.from("alternativas").insert({
+        const { error: altErr } = await client.from("alternativas").insert({
           id: alt.id,
           questao_id: q.id,
           texto: alt.text,
           correta: alt.isCorrect
         });
+        if (altErr && isTableMissingError(altErr)) {
+          console.log("[Supabase] Table 'alternativas' does not exist in schema. Skipping database save, keeping in-memory.");
+          return true;
+        }
       }
     }
     return true;
