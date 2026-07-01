@@ -41,6 +41,39 @@ import LessonView from './components/LessonView';
 import LoginView from './components/LoginView';
 import ParametersView from './components/ParametersView';
 
+function pruneLargeBase64AndValues(val: any, parentKey?: string): any {
+  if (val === null || val === undefined) return val;
+  if (typeof val === 'string') {
+    if (val.length > 20000 || (val.startsWith('data:') && val.length > 5000)) {
+      if (val.startsWith('data:image') || parentKey === 'coverImage' || parentKey === 'cover_image' || parentKey === 'avatar') {
+        return "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=800";
+      }
+      return "";
+    }
+    return val;
+  }
+  if (Array.isArray(val)) {
+    return val.map(v => pruneLargeBase64AndValues(v, parentKey));
+  }
+  if (typeof val === 'object') {
+    const res: any = {};
+    for (const key of Object.keys(val)) {
+      res[key] = pruneLargeBase64AndValues(val[key], key);
+    }
+    return res;
+  }
+  return val;
+}
+
+function safeSetLocalStorage(key: string, value: any): void {
+  try {
+    const pruned = pruneLargeBase64AndValues(value);
+    localStorage.setItem(key, typeof pruned === 'string' ? pruned : JSON.stringify(pruned));
+  } catch (e) {
+    console.warn(`[LocalStorage] Failed to save for key: ${key}`, e);
+  }
+}
+
 export default function App() {
   // Core System States
   const [users, setUsers] = useState<User[]>(INITIAL_USERS);
@@ -474,7 +507,7 @@ export default function App() {
   });
 
   useEffect(() => {
-    localStorage.setItem('edxon_theme', theme);
+    safeSetLocalStorage('edxon_theme', theme);
     if (theme === 'dark') {
       document.documentElement.classList.add('dark');
       document.body.classList.add('bg-[#000000]');
@@ -571,13 +604,13 @@ export default function App() {
   // Persist student progress and courses in localStorage on any change
   useEffect(() => {
     if (currentUserEmail) {
-      localStorage.setItem(`edxon_student_active_courses_${currentUserEmail}`, JSON.stringify(studentActiveCourses));
+      safeSetLocalStorage(`edxon_student_active_courses_${currentUserEmail}`, studentActiveCourses);
     }
   }, [studentActiveCourses, currentUserEmail]);
 
   useEffect(() => {
     if (currentUserEmail) {
-      localStorage.setItem(`edxon_student_available_courses_${currentUserEmail}`, JSON.stringify(studentAvailableCourses));
+      safeSetLocalStorage(`edxon_student_available_courses_${currentUserEmail}`, studentAvailableCourses);
     }
   }, [studentAvailableCourses, currentUserEmail]);
 
@@ -710,7 +743,7 @@ export default function App() {
     setDismissedNotificationIds((prev) => {
       const next = prev.includes(id) ? prev : [...prev, id];
       if (currentUserEmail) {
-        localStorage.setItem(`edxon_dismissed_notifications_${currentUserEmail}`, JSON.stringify(next));
+        safeSetLocalStorage(`edxon_dismissed_notifications_${currentUserEmail}`, next);
       }
       return next;
     });
@@ -720,7 +753,7 @@ export default function App() {
     const allIds = notifications.map((n) => n.id);
     setReadNotificationIds(allIds);
     if (currentUserEmail) {
-      localStorage.setItem(`edxon_read_notifications_${currentUserEmail}`, JSON.stringify(allIds));
+      safeSetLocalStorage(`edxon_read_notifications_${currentUserEmail}`, allIds);
     }
   };
 
@@ -728,7 +761,7 @@ export default function App() {
     setReadNotificationIds((prev) => {
       const next = prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id];
       if (currentUserEmail) {
-        localStorage.setItem(`edxon_read_notifications_${currentUserEmail}`, JSON.stringify(next));
+        safeSetLocalStorage(`edxon_read_notifications_${currentUserEmail}`, next);
       }
       return next;
     });

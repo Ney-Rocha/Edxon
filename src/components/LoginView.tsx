@@ -68,7 +68,11 @@ export default function LoginView({ onLogin, users, theme, setTheme }: LoginView
       setTimeout(() => {
         setIsLoading(false);
         // Save password in localStorage for subsequent login checks
-        localStorage.setItem(`educorporate_pwd_${lowercaseEmail}`, password);
+        try {
+          localStorage.setItem(`educorporate_pwd_${lowercaseEmail}`, password);
+        } catch (e) {
+          console.warn("[LoginView] Failed to save password in localStorage:", e);
+        }
         // Call parent login with the newly created credential
         onLogin(name, email);
       }, 700);
@@ -173,7 +177,11 @@ export default function LoginView({ onLogin, users, theme, setTheme }: LoginView
     setTimeout(() => {
       setIsLoading(false);
       // Persist password directly in database simulation under localStorage key
-      localStorage.setItem(`educorporate_pwd_${recoveryEmail.trim().toLowerCase()}`, newPassword);
+      try {
+        localStorage.setItem(`educorporate_pwd_${recoveryEmail.trim().toLowerCase()}`, newPassword);
+      } catch (e) {
+        console.warn("[LoginView] Failed to save recovery password in localStorage:", e);
+      }
       setRecoverySuccess('Senha corporativa redefinida com extremo sucesso! Use esta nova credencial no login.');
       
       // Auto-update values

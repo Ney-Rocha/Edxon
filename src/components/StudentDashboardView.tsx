@@ -27,6 +27,39 @@ const cleanDescription = (fullDescription?: string): string => {
   return fullDescription.split("\n\n===EDXON_DATA===\n")[0];
 };
 
+function pruneLargeBase64AndValues(val: any, parentKey?: string): any {
+  if (val === null || val === undefined) return val;
+  if (typeof val === 'string') {
+    if (val.length > 20000 || (val.startsWith('data:') && val.length > 5000)) {
+      if (val.startsWith('data:image') || parentKey === 'coverImage' || parentKey === 'cover_image' || parentKey === 'avatar') {
+        return "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=800";
+      }
+      return "";
+    }
+    return val;
+  }
+  if (Array.isArray(val)) {
+    return val.map(v => pruneLargeBase64AndValues(v, parentKey));
+  }
+  if (typeof val === 'object') {
+    const res: any = {};
+    for (const key of Object.keys(val)) {
+      res[key] = pruneLargeBase64AndValues(val[key], key);
+    }
+    return res;
+  }
+  return val;
+}
+
+function safeSetItem(key: string, value: any): void {
+  try {
+    const pruned = pruneLargeBase64AndValues(value);
+    localStorage.setItem(key, typeof pruned === 'string' ? pruned : JSON.stringify(pruned));
+  } catch (e) {
+    console.warn(`[StudentDashboard] localStorage item skipped for key: ${key}`, e);
+  }
+}
+
 interface StudentDashboardViewProps {
   setView: (view: any) => void;
   activeCourses: any[];
@@ -64,14 +97,14 @@ export default function StudentDashboardView({
   const handleAddWater = (amount: number) => {
     setWaterIntake((prev) => {
       const newVal = Math.min(prev + amount, 4000); // Max 4L
-      localStorage.setItem(`edxon_water_${currentUser?.email || 'guest'}`, newVal.toString());
+      safeSetItem(`edxon_water_${currentUser?.email || 'guest'}`, newVal.toString());
       return newVal;
     });
   };
 
   const handleResetWater = () => {
     setWaterIntake(0);
-    localStorage.setItem(`edxon_water_${currentUser?.email || 'guest'}`, '0');
+    safeSetItem(`edxon_water_${currentUser?.email || 'guest'}`, '0');
   };
 
   // Enroll dynamic action
@@ -94,7 +127,7 @@ export default function StudentDashboardView({
     setActiveCourses((prev) => [newCourse, ...prev]);
     
     // Store as last accessed since they just enrolled!
-    localStorage.setItem(`edxon_last_course_${currentUser?.email || 'guest'}`, JSON.stringify(newCourse));
+    safeSetItem(`edxon_last_course_${currentUser?.email || 'guest'}`, newCourse);
     
     if (onEnroll) {
       onEnroll(course);
@@ -134,7 +167,7 @@ export default function StudentDashboardView({
   }, [activeCourses, currentUser]);
 
   const handleResumeCourse = (course: any) => {
-    localStorage.setItem(`edxon_last_course_${currentUser?.email || 'guest'}`, JSON.stringify(course));
+    safeSetItem(`edxon_last_course_${currentUser?.email || 'guest'}`, course);
     onWatchLesson(course);
   };
 

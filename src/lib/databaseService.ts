@@ -22,10 +22,35 @@ function getStoredOrDefault<T>(key: string, defaultValue: T): T {
   }
 }
 
+function pruneLargeBase64AndValues(val: any, parentKey?: string): any {
+  if (val === null || val === undefined) return val;
+  if (typeof val === 'string') {
+    if (val.length > 20000 || (val.startsWith('data:') && val.length > 5000)) {
+      if (val.startsWith('data:image') || parentKey === 'coverImage' || parentKey === 'cover_image' || parentKey === 'avatar') {
+        return "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=800";
+      }
+      return "";
+    }
+    return val;
+  }
+  if (Array.isArray(val)) {
+    return val.map(v => pruneLargeBase64AndValues(v, parentKey));
+  }
+  if (typeof val === 'object') {
+    const res: any = {};
+    for (const key of Object.keys(val)) {
+      res[key] = pruneLargeBase64AndValues(val[key], key);
+    }
+    return res;
+  }
+  return val;
+}
+
 function setStoredValue<T>(key: string, value: T): void {
   if (!isBrowser) return;
   try {
-    localStorage.setItem(key, JSON.stringify(value));
+    const pruned = pruneLargeBase64AndValues(value);
+    localStorage.setItem(key, JSON.stringify(pruned));
   } catch (e) {
     console.error("[DatabaseService] localStorage error:", e);
   }
