@@ -99,6 +99,9 @@ export default function StudentDashboardView({
     if (onEnroll) {
       onEnroll(course);
     }
+
+    // Instantly watch the course lesson on enrollment
+    onWatchLesson(newCourse);
   };
 
   const inProgressCount = activeCourses.filter((c) => c.progress < 100).length;
