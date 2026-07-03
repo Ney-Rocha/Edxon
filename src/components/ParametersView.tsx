@@ -57,7 +57,7 @@ export default function ParametersView({ currentUser, dbConnected, onResetDb, is
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <label className="text-[10px] font-black uppercase text-slate-405 tracking-wide">Nome da Instituição</label>
+                <label className="text-[10px] font-black uppercase text-slate-600 tracking-wide">Nome da Instituição</label>
                 <input
                   type="text"
                   required
@@ -69,7 +69,7 @@ export default function ParametersView({ currentUser, dbConnected, onResetDb, is
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-[10px] font-black uppercase text-slate-405 tracking-wide">Tempo Limite de Sessão (minutos)</label>
+                <label className="text-[10px] font-black uppercase text-slate-600 tracking-wide">Tempo Limite de Sessão (minutos)</label>
                 <select
                   value={sessionTimeout}
                   onChange={(e) => setSessionTimeout(e.target.value)}

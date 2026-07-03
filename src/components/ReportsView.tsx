@@ -158,7 +158,7 @@ export default function ReportsView({
     };
   }).sort((a, b) => b.count - a.count);
 
-  const categoryColors = ['bg-indigo-650', 'bg-emerald-500', 'bg-amber-500', 'bg-rose-500', 'bg-sky-500', 'bg-purple-500'];
+  const categoryColors = ['bg-indigo-600', 'bg-emerald-500', 'bg-amber-500', 'bg-rose-500', 'bg-sky-500', 'bg-purple-500'];
 
   // Export Audit logs list as CSV file (Real client browser direct download)
   const handleExportAuditLogsCSV = () => {
@@ -334,7 +334,7 @@ export default function ReportsView({
             <button
               onClick={handleExportParticipationCSV}
               disabled={!activeCourse}
-              className="flex items-center justify-center gap-2 py-2 px-4 rounded-xl bg-indigo-650 hover:bg-indigo-700 text-white font-bold text-xs transition disabled:opacity-50"
+              className="flex items-center justify-center gap-2 py-2 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs transition disabled:opacity-50"
             >
               <Download className="h-4 w-4" />
               <span>Exportar Matrículas do Curso (.csv)</span>
@@ -711,7 +711,7 @@ export default function ReportsView({
                               </td>
 
                               {/* Perfil */}
-                              <td className="py-4 px-6 text-xs text-slate-550 whitespace-nowrap">
+                              <td className="py-4 px-6 text-xs text-slate-600 whitespace-nowrap">
                                 <span className={`px-2 py-0.5 rounded-lg text-[10px] font-bold ${
                                   p.role === 'admin'
                                     ? 'bg-amber-50 text-amber-800 border border-amber-100'

@@ -148,7 +148,7 @@ export default function QuizView({ setView, course, onUpdateProgress, onQuizFini
       <div>
         <button
           onClick={() => setView('student-dashboard')}
-          className="flex items-center gap-1 text-xs text-slate-500 hover:text-indigo-650 font-bold transition"
+          className="flex items-center gap-1 text-xs text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400 font-bold transition"
         >
           <ArrowLeft className="h-4 w-4" />
           <span>Voltar ao Meu Painel</span>
@@ -251,7 +251,7 @@ export default function QuizView({ setView, course, onUpdateProgress, onQuizFini
             </div>
 
             <div className="flex items-center justify-between">
-              <span className="text-xs font-black text-indigo-650 uppercase">Questão {currentIdx + 1} de {questions.length}</span>
+              <span className="text-xs font-black text-indigo-600 dark:text-indigo-400 uppercase">Questão {currentIdx + 1} de {questions.length}</span>
               <div className="w-40 bg-slate-100 h-1.5 rounded-full overflow-hidden">
                 <div
                   className="bg-indigo-600 h-1.5 rounded-full transition-all duration-300"

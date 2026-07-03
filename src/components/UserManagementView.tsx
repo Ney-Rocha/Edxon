@@ -377,7 +377,7 @@ export default function UserManagementView({ users, setUsers }: UserManagementVi
                         </button>
                         <button
                           onClick={() => setUserToDelete(u)}
-                          className="p-1.5 text-slate-400 hover:text-rose-605 rounded-lg hover:bg-rose-50 transition-colors"
+                          className="p-1.5 text-slate-400 hover:text-rose-600 rounded-lg hover:bg-rose-50 transition-colors"
                           title="Deletar Usuário"
                         >
                           <Trash2 className="h-4 w-4" />

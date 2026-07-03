@@ -1276,7 +1276,7 @@ export default function App() {
             <div className="relative">
               <button
                 onClick={() => setIsNotificationsOpen(!isNotificationsOpen)}
-                className="p-2 text-slate-400 hover:text-slate-650 rounded-lg hover:bg-slate-50 transition-colors relative"
+                className="p-2 text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 rounded-lg hover:bg-slate-100 dark:hover:bg-neutral-800 transition-colors relative"
                 title="Notificações"
                 id="header-notification-bell"
               >

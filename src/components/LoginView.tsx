@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Shield, User, Lock, ArrowRight, Mail, X, Sun, Moon, CheckCircle2, Eye, EyeOff } from 'lucide-react';
+import { Shield, User, Lock, ArrowRight, Mail, X, Sun, Moon, CheckCircle2, Eye, EyeOff, GraduationCap } from 'lucide-react';
 import { User as UserType } from '../types';
 import { supabaseDirect, getDatabaseMode } from '../lib/databaseService';
 
@@ -429,7 +429,7 @@ export default function LoginView({ onLogin, users, theme, setTheme }: LoginView
           isDarkMode ? 'bg-emerald-500/5' : 'bg-[#10b981]/15'
         }`} />
         <div className={`absolute top-1/2 -left-24 w-64 h-64 rounded-full blur-2xl transition-opacity duration-500 ${
-          isDarkMode ? 'bg-emerald-700/5' : 'bg-emerald-650/10'
+          isDarkMode ? 'bg-emerald-700/5' : 'bg-emerald-500/10'
         }`} />
       </div>
 
@@ -452,14 +452,15 @@ export default function LoginView({ onLogin, users, theme, setTheme }: LoginView
       </div>
 
       {/* Main Centered Content Container */}
-      <div className="relative z-10 w-full max-w-[440px] my-auto flex flex-col items-center">
+      <div className="relative z-10 w-full max-w-[440px] my-auto -mt-6 sm:-mt-10 flex flex-col items-center">
         
         {/* Brand Header */}
-        <header className="mb-8 text-center flex flex-col items-center gap-2">
-          <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-black text-[#006c49] dark:text-[#10b981] font-display tracking-tight">
-              EduCorporate
-            </h1>
+        <header className="mb-6 text-center flex flex-col items-center gap-2">
+          <div className="flex items-center justify-center gap-2.5 select-none" id="login-brand-text">
+            <GraduationCap className="h-9 w-9 text-emerald-400" />
+            <span className={`text-3xl font-black tracking-tight ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+              dx.on
+            </span>
           </div>
         </header>
 
@@ -478,7 +479,7 @@ export default function LoginView({ onLogin, users, theme, setTheme }: LoginView
               {isRegistering ? 'Crie sua conta' : 'Acesse sua conta'}
             </h2>
             <p className={`text-xs leading-relaxed ${
-              isDarkMode ? 'text-slate-400' : 'text-slate-650'
+              isDarkMode ? 'text-slate-400' : 'text-slate-600'
             }`}>
               {isRegistering 
                 ? 'Entre com seus dados de cadastro corporativo.' 
@@ -497,7 +498,7 @@ export default function LoginView({ onLogin, users, theme, setTheme }: LoginView
 
             {error && (
               <div className="space-y-3">
-                <div className="bg-rose-950/40 border border-rose-900/50 p-3 rounded-xl text-[11px] text-rose-350 dark:text-rose-300 font-bold text-center leading-normal">
+                <div className="bg-rose-950/40 border border-rose-900/50 p-3 rounded-xl text-[11px] text-rose-500 dark:text-rose-300 font-bold text-center leading-normal">
                   {error}
                 </div>
                 {showSimulationBypass && (
@@ -515,7 +516,7 @@ export default function LoginView({ onLogin, users, theme, setTheme }: LoginView
             {isRegistering && (
               <div className="space-y-1.5">
                 <label className={`text-[11px] font-bold block px-0.5 ${
-                  isDarkMode ? 'text-slate-355' : 'text-slate-700'
+                  isDarkMode ? 'text-slate-300' : 'text-slate-700'
                 }`} htmlFor="reg-name">
                   Nome Completo
                 </label>
@@ -530,8 +531,8 @@ export default function LoginView({ onLogin, users, theme, setTheme }: LoginView
                     onChange={(e) => setName(e.target.value)}
                     className={`w-full border rounded-xl py-3 pl-10 pr-4 text-xs font-semibold focus:outline-none focus:ring-4 transition-all ${
                       isDarkMode 
-                        ? 'bg-[#0a0d0a] border-neutral-800 text-white focus:ring-emerald-500/10 focus:border-[#10b981] placeholder-neutral-700' 
-                        : 'bg-[#f4fbf4]/60 border-slate-200 text-slate-900 focus:ring-[#10b981]/10 focus:border-[#10b981] placeholder-slate-400'
+                        ? 'bg-[#0a0d0a] border-neutral-800 text-white focus:ring-emerald-500/10 focus:border-[#10b981] placeholder-neutral-500' 
+                        : 'bg-[#f4fbf4]/60 border-slate-200 text-slate-900 focus:ring-[#10b981]/10 focus:border-[#10b981] placeholder-slate-500'
                     }`}
                   />
                 </div>
@@ -541,7 +542,7 @@ export default function LoginView({ onLogin, users, theme, setTheme }: LoginView
             {/* Email field */}
             <div className="space-y-1.5">
               <label className={`text-[11px] font-bold block px-0.5 ${
-                isDarkMode ? 'text-slate-355' : 'text-slate-700'
+                isDarkMode ? 'text-slate-300' : 'text-slate-700'
               }`} htmlFor="email">
                 E-mail
               </label>
@@ -556,8 +557,8 @@ export default function LoginView({ onLogin, users, theme, setTheme }: LoginView
                   onChange={(e) => setEmail(e.target.value)}
                   className={`w-full border rounded-xl py-3 pl-10 pr-4 text-xs font-semibold focus:outline-none focus:ring-4 transition-all ${
                     isDarkMode 
-                      ? 'bg-[#0a0d0a] border-neutral-800 text-white focus:ring-emerald-500/10 focus:border-[#10b981] placeholder-neutral-700' 
-                      : 'bg-[#f4fbf4]/60 border-slate-200 text-slate-900 focus:ring-[#10b981]/10 focus:border-[#10b981] placeholder-slate-400'
+                      ? 'bg-[#0a0d0a] border-neutral-800 text-white focus:ring-emerald-500/10 focus:border-[#10b981] placeholder-neutral-500' 
+                      : 'bg-[#f4fbf4]/60 border-slate-200 text-slate-900 focus:ring-[#10b981]/10 focus:border-[#10b981] placeholder-slate-500'
                   }`}
                 />
               </div>
@@ -566,7 +567,7 @@ export default function LoginView({ onLogin, users, theme, setTheme }: LoginView
             {/* Password field */}
             <div className="space-y-1.5">
               <label className={`text-[11px] font-bold block px-0.5 ${
-                isDarkMode ? 'text-slate-355' : 'text-slate-700'
+                isDarkMode ? 'text-slate-300' : 'text-slate-700'
               }`} htmlFor="password">
                 Senha
               </label>
@@ -581,8 +582,8 @@ export default function LoginView({ onLogin, users, theme, setTheme }: LoginView
                   onChange={(e) => setPassword(e.target.value)}
                   className={`w-full border rounded-xl py-3 pl-10 pr-11 text-xs font-semibold focus:outline-none focus:ring-4 transition-all ${
                     isDarkMode 
-                      ? 'bg-[#0a0d0a] border-neutral-800 text-white focus:ring-emerald-500/10 focus:border-[#10b981] placeholder-neutral-700' 
-                      : 'bg-[#f4fbf4]/60 border-slate-200 text-slate-900 focus:ring-[#10b981]/10 focus:border-[#10b981] placeholder-slate-400'
+                      ? 'bg-[#0a0d0a] border-neutral-800 text-white focus:ring-emerald-500/10 focus:border-[#10b981] placeholder-neutral-500' 
+                      : 'bg-[#f4fbf4]/60 border-slate-200 text-slate-900 focus:ring-[#10b981]/10 focus:border-[#10b981] placeholder-slate-500'
                   }`}
                 />
                 <button
@@ -601,7 +602,7 @@ export default function LoginView({ onLogin, users, theme, setTheme }: LoginView
                   <button
                     type="button"
                     onClick={() => setIsRecoveryModalOpen(true)}
-                    className="text-xs font-medium text-emerald-650 dark:text-emerald-400 hover:underline cursor-pointer transition-all"
+                    className="text-xs font-medium text-emerald-600 dark:text-emerald-400 hover:underline cursor-pointer transition-all"
                   >
                     Esqueci minha senha
                   </button>
@@ -613,7 +614,7 @@ export default function LoginView({ onLogin, users, theme, setTheme }: LoginView
             {isRegistering && (
               <div className="space-y-1.5">
                 <label className={`text-[11px] font-bold block px-0.5 ${
-                  isDarkMode ? 'text-slate-355' : 'text-slate-700'
+                  isDarkMode ? 'text-slate-300' : 'text-slate-700'
                 }`} htmlFor="confirmPassword">
                   Confirmar Senha
                 </label>
@@ -628,8 +629,8 @@ export default function LoginView({ onLogin, users, theme, setTheme }: LoginView
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     className={`w-full border rounded-xl py-3 pl-10 pr-11 text-xs font-semibold focus:outline-none focus:ring-4 transition-all ${
                       isDarkMode 
-                        ? 'bg-[#0a0d0a] border-neutral-800 text-white focus:ring-emerald-500/10 focus:border-[#10b981] placeholder-neutral-700' 
-                        : 'bg-[#f4fbf4]/60 border-slate-200 text-slate-900 focus:ring-[#10b981]/10 focus:border-[#10b981] placeholder-slate-400'
+                        ? 'bg-[#0a0d0a] border-neutral-800 text-white focus:ring-emerald-500/10 focus:border-[#10b981] placeholder-neutral-500' 
+                        : 'bg-[#f4fbf4]/60 border-slate-200 text-slate-900 focus:ring-[#10b981]/10 focus:border-[#10b981] placeholder-slate-500'
                     }`}
                   />
                   <button
@@ -659,7 +660,7 @@ export default function LoginView({ onLogin, users, theme, setTheme }: LoginView
 
         {/* Footer Action */}
         <footer className="mt-6 text-center">
-          <p className={`text-xs ${isDarkMode ? 'text-slate-400' : 'text-slate-650'}`}>
+          <p className={`text-xs ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
             {isRegistering ? 'Já tem uma conta?' : 'Ainda não tem uma conta?'}{' '}
             <button
               type="button"
@@ -733,7 +734,7 @@ export default function LoginView({ onLogin, users, theme, setTheme }: LoginView
             ) : (
               <div className="space-y-4">
                 {recoveryError && (
-                  <div className="bg-rose-950/45 border border-rose-900/40 p-2.5 rounded-xl text-[10.5px] text-rose-350 font-bold text-center">
+                  <div className="bg-rose-950/45 border border-rose-900/40 p-2.5 rounded-xl text-[10.5px] text-rose-400 font-bold text-center">
                     {recoveryError}
                   </div>
                 )}

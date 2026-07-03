@@ -8,7 +8,8 @@ import {
   Settings,
   Sparkles,
   X,
-  LogOut
+  LogOut,
+  GraduationCap
 } from 'lucide-react';
 import { ViewType, Role, User } from '../types';
 import { UI_IMAGES } from '../data';
@@ -68,11 +69,11 @@ export default function Navigation({
         }`}
       >
         {/* Top Header Logo */}
-        <div className="p-6">
-          <div className="flex items-center justify-between mb-8">
-            <div className="flex items-center space-x-2">
-              <span className="text-sm font-black tracking-widest text-[#00ED2D]">EDXOn</span>
-              <span className="text-[10px] font-bold text-[#00ED2D] bg-[#00ED2D]/10 px-2 py-1 rounded inline-block border border-[#00ED2D]/30 uppercase tracking-widest font-mono">LMS</span>
+        <div className="pt-4 px-6 pb-6">
+          <div className="flex items-center justify-between mb-5">
+            <div className="flex items-center gap-2 select-none" id="sidebar-brand-text">
+              <GraduationCap className="h-6 w-6 text-emerald-400" />
+              <span className="text-xl font-bold text-white tracking-tight">dx.on</span>
             </div>
 
             {/* Mobile Close Button */}
@@ -159,7 +160,7 @@ export default function Navigation({
           {onLogout && (
             <button
               onClick={onLogout}
-              className="w-full py-2 px-3 rounded-lg bg-slate-900/60 hover:bg-rose-950/30 text-xs text-rose-405 hover:text-rose-400 font-bold flex items-center justify-center space-x-2 transition-all border border-rose-900/30 hover:border-rose-900/60"
+              className="w-full py-2 px-3 rounded-lg bg-slate-900/60 hover:bg-rose-950/30 text-xs text-rose-400 hover:text-rose-400 font-bold flex items-center justify-center space-x-2 transition-all border border-rose-900/30 hover:border-rose-900/60"
               id="sidebar-logout-button"
             >
               <LogOut className="h-3.5 w-3.5 text-rose-500 shrink-0" />

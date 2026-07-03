@@ -295,7 +295,7 @@ export default function StudentDashboardView({
                 </p>
                 <button
                   onClick={() => handleResumeCourse(lastCourse)}
-                  className="px-4 py-2 bg-indigo-650 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 self-end sm:self-auto"
+                  className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 self-end sm:self-auto"
                 >
                   <span>Retomar Estudos</span>
                   <ArrowRight className="h-3.5 w-3.5" />
@@ -397,7 +397,7 @@ export default function StudentDashboardView({
                         <div className="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden">
                           <div
                             className={`h-2.5 rounded-full transition-all duration-500 ${
-                              isCompleted ? 'bg-emerald-500' : 'bg-indigo-650'
+                              isCompleted ? 'bg-emerald-500' : 'bg-indigo-600'
                             }`}
                             style={{ width: `${c.progress}%` }}
                           />
@@ -455,7 +455,7 @@ export default function StudentDashboardView({
                             handleResumeCourse(c);
                             setView('student-quiz');
                           }}
-                          className="flex items-center gap-1 px-3.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-[11px] font-black transition-all shadow-md shadow-indigo-650/10 hover:-translate-y-0.5"
+                          className="flex items-center gap-1 px-3.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-[11px] font-black transition-all shadow-md shadow-indigo-600/10 hover:-translate-y-0.5"
                         >
                           <span>Fazer Prova</span>
                           <ArrowRight className="h-3 w-3" />
@@ -531,7 +531,7 @@ export default function StudentDashboardView({
 
                 <button
                   onClick={() => handleEnroll(ac)}
-                  className="w-full py-2 hover:bg-emerald-50 hover:text-emerald-700 text-indigo-650 border border-slate-100 hover:border-emerald-250 text-[11px] font-black rounded-xl transition duration-200 bg-slate-50/50 flex items-center justify-center gap-1.5"
+                  className="w-full py-2 hover:bg-emerald-50 hover:text-emerald-700 text-indigo-600 border border-slate-200 hover:border-emerald-300 text-[11px] font-black rounded-xl transition duration-200 bg-slate-50/50 flex items-center justify-center gap-1.5"
                 >
                   <Bookmark className="h-3.5 w-3.5" />
                   <span>Matricular-se</span>

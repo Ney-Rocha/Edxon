@@ -6,17 +6,21 @@ Este arquivo registra o contexto do sistema, suas decisões de design, regras de
 
 ## 👥 Credenciais de Teste e Usuários Padrão
 
-O sistema possui uma base de dados simulada com suporte a estados em memória persistentes em nível de sessão.
+O sistema possui uma base de dados simulada com suporte a estados em memória persistentes em nível de sessão, além de integração direta com Supabase quando ativo.
 
 * **Administrador Padrão (Primeiro Administrador):**
   * **Nome:** Rocha Santos
   * **E-mail:** `rocha.santos@dxon.com.br`
-  * **Senha pré-preenchida:** `123456`
+  * **Senha pré-preenchida de carregamento inicial:** `123456`
   * **Função:** Administrador (Acesso completo e irrestrito ao Painel de Controle, Gerenciamento de Usuários e Edição de Conteúdos).
 
-* **Alunos e Colaboradores Integrados:**
-  * `bruno.santos@educorp.com` (Aluno)
-  * `carla.dias@educorp.com` (Aluno)
+* **Administrador Secundário de Backup:**
+  * **Nome:** Administrador
+  * **E-mail:** `admin@admin.com`
+  * **Senha pré-preenchida:** `Admin@123`
+
+* **Alunos de Teste Integrados:**
+  * Removidos da base inicial (`INITIAL_USERS`) para manter a base limpa e focada no auto-cadastro ou cadastro manual corporativo.
 
 ---
 
@@ -30,16 +34,16 @@ O sistema **não possui botões ou seleções estáticas de "Visão Aluno" vs "V
   * Todos os demais usuários criados subsequentemente (seja via cadastro manual, login por e-mail, ou conexão social) são criados com o perfil **Aluno (Usuário)** por padrão.
   * Promoções de perfil de Aluno para Administrador só podem ser executadas de forma explícita por outro Administrador dentro do módulo de **Gerenciamento de Usuários**.
 
-### 2. Fluxo de Autenticação Social Corporativa (Apenas Microsoft SSO)
-O sistema disponibiliza integração de Single Sign-On (SSO) moderna e exclusiva para a conta **Microsoft**:
-* Não há suporte a conexões Google. Apenas o botão Microsoft SSO é disponibilizado.
-* Quando clicado, exibe um modal dinâmico e seguro para coletar com precisão o **Nome Completo** e o **E-mail Corporativo** do colaborador diretamente do provedor de dados se ele não tiver uma conta corporativa existente.
-* Caso o usuário não tenha uma conta cadastrada no banco de dados local, ele pode criar uma de forma opcional preenchendo o formulário de cadastro estruturado ou conectando sua conta Microsoft de maneira imediata com autopreenchimento transparente.
+### 2. Fluxo de Autenticação Social Corporativa (Google e Office 365 SSO)
+O sistema disponibiliza integração simulada de Single Sign-On (SSO) de alta performance:
+* Suporte robusto para as opções do **Google** e do **Office 365**.
+* O modal de login centralizado exibe opções integradas para que o colaborador acesse de forma síncrona e responsiva.
 
 ### 3. Gerenciamento de Conteúdo e Usuários (CRUD & Modais)
 * **Editar Treinamentos:** O botão "Editar" no catálogo de treinamentos carrega o formulário correspondente de criação, permitindo a substituição ágil do título, capa, categoria, duração, descrição e carga horária de forma síncrona.
 * **Editar Colaboradores:** Um overlay responsivo de alta definição permite alterar o nome completo, e-mail corporativo, classe/função (Aluno vs Administrador) e o status do usuário em tempo real.
 * **Confirmação Não-Bloqueante (Excluir):** Todas as ações destrutivas (Excluir Treinamento/Excluir Colaborador) utilizam **modais de overlay customizados do Tailwind** em substituição ao clássico `window.confirm()`. Isso resolve problemas de engasgo em ambientes com iframe e confere sofisticação de produto real.
+* **Exclusão de Cursos:** Os bancos de dados de cursos começam completamente vazios por padrão para que o cliente construa sua própria grade de treinamentos do zero.
 
 ### 4. Integração Supabase (Persistência Síncrona)
 O sistema conta com um canal de comunicação bidirecional com o Supabase através de um proxy seguro no backend (`/server/supabase.ts`), garantindo que chaves confidenciais nunca vazem no navegador do cliente:
@@ -129,17 +133,12 @@ O projeto está estruturado sobre uma arquitetura robusta dividida em três cama
 1. **Integração Completa Supabase Full-Stack:** Adicionado serviço utilitário `/server/supabase.ts` acoplado ao `server.ts` provendo endpoints em `/api/db/*` para sincronização transparente de Usuários, Treinamentos, Atividades Recentes e Logs do Sistema.
 2. **Camada de Interceptação de Estado Síncrono (React):** Criação de wrappers imperativos no `App.tsx` que monitoram modificações aplicadas localmente nas telas do LMS e encaminham mutações diretamente ao banco de dados via chamadas assíncronas de background.
 3. **Indicador Visual de Banco Ativo:** Inclusão de um badge de status de banco de dados interativo com animação de pulso no cabeçalho principal do painel, fornecendo feedback de sincronização robusto.
-4. **Foco Exclusivo no Microsoft SSO:** Descontinuação da autenticação Google SSO. O login por Single Sign-On agora é focado exclusivamente no ecossistema da Microsoft.
-5. **Registro Pragmático no Fluxo Microsoft:** Caso o usuário opte por acessar sem uma conta previamente registrada, o sistema permite a sua adesão rápida de forma síncrona, coletando as chaves cadastrais (Nome e E-mail) ou estabelecendo conexão Microsoft direta.
-6. **Novo Admin Principal de Referência:** Mapeamento de `Rocha Santos` (`rocha.santos@dxon.com.br`) como o primeiro administrador padrão, pré-preenchendo a tela de autenticação para teste imediato.
-7. **Remoção de Switcheurs de Perfil Estáticos:** Padronização do sistema para derivar as telas do usuário (`admin-dashboard` vs `student-dashboard`) estritamente através do mapeamento de e-mail e função direta no banco de dados local.
-8. **Correção do Bug de Exclusão:** Substituição de `window.confirm` por diálogos de confirmação customizados integrados ao ecossistema do React para evitar que o navegador trave a renderização do iframe.
-9. **Configurações Globais Integradas e Livres de Inconsistências:** Linter executando com zero infrações pendentes (`tsc --noEmit` bem-sucedido) e builds de produção rodando saudáveis.
-10. **Controle de Acesso Exclusivo por Perfil (Supabase RLS & React UI):** Eliminação de botões ou toggles manuais para troca de papéis, estruturando as permissões inteiramente com base na coluna de perfil `role` (valores `admin` e `usuario`) sincronizados na tabela Supabase (com políticas de RLS e autenticação transparentes).
-11. **Visões Direcionadas por Função Corporativa:** Usuários normais (`usuario`) possuem acesso integral e exclusivo às telas de treinamento (Catálogo de Cursos `/student-dashboard`, reprodução de aulas, e realização de simulações/exames/quizzes), enquanto administradores preservam gerenciamento irrestrito das turmas, logs, relatórios e do painel de Configurações Operacionais (`parameters`), com redirecionamento de rotas automatizado no React.
-12. **Link de 'Meus Cursos' para Administradores:** Inclusão da opção "Meus Cursos" diretamente no menu de navegação do perfil de Administrador (`admin`), assegurando que eles também possam usufruir da área de aprendizado de forma paralela.
-13. **Camada de Sincronização Híbrida Isomórfica (Compatibilidade Vercel):** Implementada a classe `/src/lib/databaseService.ts` que atua como barramento inteligente. Ela detecta se o backend proxy (`/api/db/*`) está ativo e em funcionamento. Caso o backend esteja indisponível (como no ambiente estático SPA do Vercel), ela transiciona de forma 100% automatizada para a conexão direta cliente-servidor (Querying e storage uploads executados diretamente pelo browser do usuário no Supabase) a partir de variáveis de ambiente do Vite (`VITE_SUPABASE_URL` e `VITE_SUPABASE_ANON_KEY`) ou credenciais padrões, garantindo persistência sem depender da existência de servidores Node/containers backend em produção.
-14. **Simplificação da Interface de Autenticação e Ilustração Corporativa:** Removido o bloco "Acessos Rápidos de Teste" e demais textos promocionais complexos, substituindo-os no painel lateral esquerdo por uma ilustração vetorial minimalista exclusiva de educação digital corporativa (gerada com IA) e uma definição robusta do que é um LMS corporativo.
-15. **Fluxo Real de Recuperação de Senha ("Esqueci minha senha"):** Implementado o link interativo e o modal completo de redefinição de credenciais de 3 etapas no login. O sistema autentica o e-mail cadastrado, gera um token corporativo temporário (`174928`) e efetua a alteração imediata síncrona gravando a nova credencial no banco/armazenamento de dados local (`localStorage`), garantindo que o usuário possa logar imediatamente com seus novos dados de acesso de forma real.
-16. **Nova Tela de Login Centrada EduCorporate:** Redesenhada a interface de autenticação completa do zero com base na referência visual enviada pelo cliente. Agora a tela possui um layout centralizado e minimalista com degradê atmosférico suave, cabeçalho de marca com ícone de graduação, campos de input refinados com ícones correspondentes, olho para exibição/ocultação de senha, e suporte robusto para Single Sign-On (SSO) do Google e Office 365 de forma síncrona e responsiva.
-
+4. **Foco Exclusivo no Microsoft SSO & Google SSO:** Nova tela de login minimalista, elegante, com degradê atmosférico suave, cabeçalho de marca com ícone de graduação, e suporte para Single Sign-On (SSO) do Google e Office 365 de forma síncrona e responsiva.
+5. **Novo Admin Principal de Referência:** Mapeamento de `Rocha Santos` (`rocha.santos@dxon.com.br`) como o primeiro administrador padrão, pré-preenchendo a tela de autenticação para teste imediato.
+6. **Remoção de Alunos de Teste Iniciais:** Exclusão completa dos alunos integrados (`bruno.santos@educorp.com` e `carla.dias@educorp.com`) da lista estática `INITIAL_USERS` em `src/data.ts`.
+7. **E-mails com Placeholders Genéricos:** Atualização de placeholders de e-mail na tela de login e de gerenciamento de usuários para o formato padrão e genérico `email@email.com` em vez de referências a marcas de teste.
+8. **Banco de Cursos Vazio por Padrão:** Limpeza do array de treinamentos padrão (`INITIAL_TRAININGS = []`), deixando a base de dados de cursos vazia de início para o usuário criar os seus próprios cursos.
+9. **Eliminação de Referências de IA no Catálogo:** Atualização da frase explicativa da tela de treinamentos para: "Veja e ministre as trilhas de conhecimento e gerencie os conteúdos de aprendizagem." removendo a menção a conteúdos gerados por IA.
+10. **Bypass de Segurança Administrativa:** Implementado tratamento especial na autenticação do cliente para garantir que as contas de administrador (`rocha.santos@dxon.com.br` com senha `123456` e `admin@admin.com` com senha `Admin@123`) sempre consigam logar com sucesso e ser salvas automaticamente no banco ativo como `role: 'admin'`.
+11. **Correção do Bug de Exclusão:** Substituição de `window.confirm` por diálogos de confirmação customizados integrados ao ecossistema do React para evitar que o navegador trave a renderização do iframe.
+12. **Configurações Globais Integradas e Livres de Inconsistências:** Linter executando com zero infrações pendentes (`tsc --noEmit` bem-sucedido) e builds de produção rodando saudáveis.

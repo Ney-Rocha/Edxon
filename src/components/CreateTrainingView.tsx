@@ -623,7 +623,7 @@ export default function CreateTrainingView({
             {/* CARD 1: Core Course Information */}
             <div className="bg-white rounded-3xl border border-slate-250/80 p-6 shadow-sm space-y-5">
               <div className="flex items-center gap-2 border-b border-slate-100 pb-3">
-                <span className="p-1.5 bg-indigo-50 text-indigo-650 rounded-lg">
+                <span className="p-1.5 bg-indigo-50 text-indigo-600 rounded-lg">
                   <BookOpen className="h-4.5 w-4.5" />
                 </span>
                 <h3 className="font-bold text-slate-800 text-sm">Dados Básicos do Treinamento</h3>
@@ -649,7 +649,7 @@ export default function CreateTrainingView({
                     <button
                       type="button"
                       onClick={() => setShowNewTypeForm(!showNewTypeForm)}
-                      className="text-[10px] font-black text-indigo-650 hover:text-indigo-850 uppercase tracking-wider"
+                      className="text-[10px] font-black text-indigo-600 hover:text-indigo-800 uppercase tracking-wider"
                     >
                       {showNewTypeForm ? 'Fechar' : '+ Nova'}
                     </button>
@@ -692,7 +692,7 @@ export default function CreateTrainingView({
                           type="button"
                           onClick={handleCreateNewType}
                           disabled={savingType || !newTypeName}
-                          className="px-3 py-1.5 bg-indigo-650 hover:bg-indigo-750 text-white font-bold text-[10px] uppercase rounded-lg transition"
+                          className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-[10px] uppercase rounded-lg transition"
                         >
                           Salvar Categoria
                         </button>
@@ -1071,7 +1071,7 @@ export default function CreateTrainingView({
                       </button>
 
                       <div className="space-y-1 pr-6">
-                        <span className="text-[9px] font-black uppercase text-indigo-650 tracking-wider">Questão {qIdx + 1} de {questions.length}</span>
+                        <span className="text-[9px] font-black uppercase text-indigo-600 tracking-wider">Questão {qIdx + 1} de {questions.length}</span>
                         <input
                           type="text"
                           required
@@ -1092,7 +1092,7 @@ export default function CreateTrainingView({
                           <button
                             type="button"
                             onClick={() => handleAddAlternative(q.id)}
-                            className="text-[10px] font-black text-indigo-650 hover:text-indigo-850 bg-indigo-50 hover:bg-indigo-100 px-2.5 py-1 rounded-lg uppercase tracking-wider transition"
+                            className="text-[10px] font-black text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 px-2.5 py-1 rounded-lg uppercase tracking-wider transition"
                           >
                             + Adicionar Alternativa
                           </button>
@@ -1107,7 +1107,7 @@ export default function CreateTrainingView({
                                 className={`flex items-center gap-3 border rounded-xl px-3 py-2 text-xs transition duration-200 ${
                                   alt.isCorrect
                                     ? 'border-emerald-500 bg-emerald-50/20 shadow-sm shadow-emerald-500/5'
-                                    : 'border-slate-200 hover:border-slate-350 bg-white'
+                                    : 'border-slate-200 hover:border-slate-400 bg-white'
                                 }`}
                               >
                                 {/* Option Letter Indicator */}
@@ -1178,7 +1178,7 @@ export default function CreateTrainingView({
                             value={q.explanation || ''}
                             onChange={(e) => handleUpdateQuestionExplanation(q.id, e.target.value)}
                             placeholder="Ex: A resposta correta é a B pois a escuta ativa garante a imparcialidade e a mediação..."
-                            className="w-full text-[11px] font-medium px-3.5 py-2 border border-slate-200 bg-white rounded-xl focus:outline-none focus:ring-1 focus:ring-indigo-500 text-slate-650"
+                            className="w-full text-[11px] font-medium px-3.5 py-2 border border-slate-200 bg-white rounded-xl focus:outline-none focus:ring-1 focus:ring-indigo-500 text-slate-600"
                           />
                         </div>
                       </div>
