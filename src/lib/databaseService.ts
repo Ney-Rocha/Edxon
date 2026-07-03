@@ -6,7 +6,7 @@ import { INITIAL_USERS, INITIAL_TRAININGS, INITIAL_ACTIVITIES, INITIAL_SYSTEM_LO
 const URL = (import.meta as any).env?.VITE_SUPABASE_URL || "https://doaqyvaaqlrjxqtsvtqy.supabase.co";
 const KEY = (import.meta as any).env?.VITE_SUPABASE_ANON_KEY || "sb_publishable_UM0T0-kFoVMQviFI-nn0Qw_JUKQ1OUc";
 
-let supabaseDirect: SupabaseClient | null = null;
+export let supabaseDirect: SupabaseClient | null = null;
 let mode: 'proxy' | 'direct' | 'memory' = 'memory';
 
 // Safe, persistent in-memory fallbacks inside client memory

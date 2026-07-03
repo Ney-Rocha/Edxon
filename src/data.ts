@@ -2,12 +2,36 @@ import { User, Training, RecentActivity, SystemLog, CourseType, Question } from 
 
 export const INITIAL_USERS: User[] = [
   {
+    id: 'admin-rocha',
+    name: 'Rocha Santos',
+    email: 'rocha.santos@dxon.com.br',
+    role: 'admin',
+    status: 'Ativo',
+    avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150'
+  },
+  {
     id: 'admin-1',
     name: 'Administrador',
     email: 'admin@admin.com',
     role: 'admin',
     status: 'Ativo',
     avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150'
+  },
+  {
+    id: 'student-bruno',
+    name: 'Bruno Santos',
+    email: 'bruno.santos@educorp.com',
+    role: 'usuario',
+    status: 'Ativo',
+    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150'
+  },
+  {
+    id: 'student-carla',
+    name: 'Carla Dias',
+    email: 'carla.dias@educorp.com',
+    role: 'usuario',
+    status: 'Ativo',
+    avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150'
   }
 ];
 
