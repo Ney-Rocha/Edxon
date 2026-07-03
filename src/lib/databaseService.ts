@@ -863,7 +863,7 @@ export async function resetDatabase(): Promise<{ success: boolean; message: stri
     try {
       await supabaseDirect.from("activities").delete().neq("id", "none_to_match_all");
       await supabaseDirect.from("system_logs").delete().neq("id", "none_to_match_all");
-      await supabaseDirect.from("users").delete().neq("id", "8291");
+      await supabaseDirect.from("users").delete().neq("id", "admin-1");
       try {
         await supabaseDirect.from("alternativas").delete().neq("id", "none_to_match_all");
         await supabaseDirect.from("questoes").delete().neq("id", "none_to_match_all");

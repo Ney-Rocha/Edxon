@@ -763,8 +763,8 @@ export async function resetDatabase(): Promise<{ success: boolean; message: stri
       await client.from("activities").delete().neq("id", "none_to_match_all");
       // Clear logs
       await client.from("system_logs").delete().neq("id", "none_to_match_all");
-      // Clear users except admin '8291'
-      await client.from("users").delete().neq("id", "8291");
+      // Clear users except admin 'admin-1'
+      await client.from("users").delete().neq("id", "admin-1");
       // Clear questions & alternatives
       try {
         await client.from("alternativas").delete().neq("id", "none_to_match_all");

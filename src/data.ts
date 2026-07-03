@@ -2,12 +2,12 @@ import { User, Training, RecentActivity, SystemLog, CourseType, Question } from 
 
 export const INITIAL_USERS: User[] = [
   {
-    id: '8291',
-    name: 'Rocha Santos',
-    email: 'rocha.santos@dxon.com.br',
+    id: 'admin-1',
+    name: 'Administrador',
+    email: 'admin@admin.com',
     role: 'admin',
     status: 'Ativo',
-    avatar: 'https://lh3.googleusercontent.com/aida-public/AB6AXuAdL8h6k_ggxfOZK9P5_7zM69SzDN3cpq_S2V3Fp3E2ra3p7psPg1d4pgdEJLWc6GMUT_fbCqcJaUHATpAxueTpRIL69DjQAPhGy2a0etojTCnts89BNoygznfF4NDtNgJAHjBcPrawtAq3Hzj8ZbL3-z11CuxXkj2i9CJOZPORFTSyrdL-XrpFcM_WB7bze7rpxxMrCs8RDmOfIGUvWL9wWTJLIOvS2YhA1g4sT96fzgeWF32_-W0wQaVKRRu5IlbCO1C2QlcamO4'
+    avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150'
   }
 ];
 

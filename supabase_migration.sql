@@ -88,9 +88,7 @@ create index if not exists idx_system_logs_created_at on system_logs(created_at 
 -- --------------------------------------------------
 insert into users (id, name, email, role, status, avatar)
 values 
-  ('usr-00', 'Rocha Santos', 'rocha.santos@dxon.com.br', 'admin', 'Ativo', 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150'),
-  ('usr-01', 'Bruno Santos', 'bruno.santos@educorp.com', 'usuario', 'Ativo', 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150'),
-  ('usr-02', 'Carla Dias', 'carla.dias@educorp.com', 'usuario', 'Ativo', 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150')
+  ('admin-1', 'Administrador', 'admin@admin.com', 'admin', 'Ativo', 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150')
 on conflict (id) do update set
   name = excluded.name,
   email = excluded.email,
@@ -99,96 +97,16 @@ on conflict (id) do update set
   avatar = excluded.avatar;
 
 -- --------------------------------------------------
--- 7. SEED DATA: CORP TRAINING CATALOG
+-- 7. SEED DATA: CORP TRAINING CATALOG (Clean in production)
 -- --------------------------------------------------
-insert into trainings (id, title, category, duration, views_count, type, status, cover_image, updated_date, description)
-values 
-  (
-    'tr-01', 
-    'Segurança da Informação e LGPD', 
-    'Compliance', 
-    '4h', 
-    142, 
-    'Obrigatório', 
-    'Ativo', 
-    'https://images.unsplash.com/photo-1563986768609-322da13575f3?w=500', 
-    '23 Mai 2026', 
-    'Instruções cruciais sobre o tratamento de dados pessoais sensíveis e segurança cibernética corporativa alinhada com os preceitos da LGPD.'
-  ),
-  (
-    'tr-02', 
-    'Comunicação Assertiva e Liderança', 
-    'Desenvolvimento Pessoal', 
-    '6h', 
-    89, 
-    'Recomendado', 
-    'Ativo', 
-    'https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=500', 
-    '18 Mai 2026', 
-    'Conceitos modernos para aprimorar o trabalho em equipes de alta performance, feedback empático e alinhamento tático corporativo.'
-  ),
-  (
-    'tr-03', 
-    'Código de Ética e Integridade', 
-    'Compliance', 
-    '2h', 
-    210, 
-    'Obrigatório', 
-    'Ativo', 
-    'https://images.unsplash.com/photo-1450133064473-71024230f91b?w=500', 
-    '15 Abr 2026', 
-    'Diretrizes norteadoras e valores corporativos DXON voltados à prevenção de corrupção, conflitos de interesse e integridade nas negociações.'
-  ),
-  (
-    'tr-04', 
-    'Princípios de Clean Code em TS', 
-    'Tecnologia', 
-    '8h', 
-    54, 
-    'Livre', 
-    'Ativo', 
-    'https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=500', 
-    '10 Mai 2026', 
-    'Capacitação técnica voltada à legibilidade de software, refabricações síncronas estruturadas, arquitetura limpa e testes unitários de integração.'
-  )
-on conflict (id) do update set
-  title = excluded.title,
-  category = excluded.category,
-  duration = excluded.duration,
-  views_count = excluded.views_count,
-  type = excluded.type,
-  status = excluded.status,
-  cover_image = excluded.cover_image,
-  updated_date = excluded.updated_date,
-  description = excluded.description;
 
 -- --------------------------------------------------
--- 8. SEED DATA: SYSTEM LOGS AUDIT
+-- 8. SEED DATA: SYSTEM LOGS AUDIT (Clean in production)
 -- --------------------------------------------------
-insert into system_logs (id, timestamp, user_name, user_initials, user_bg_color, user_text_color, action, training, ip, status)
-values
-  ('log-01', '25/05/2026 19:42', 'Rocha Santos', 'RS', 'bg-indigo-500', 'text-white', 'Excluiu Treinamento corporativo legível', 'Trilha Antiga de Integração', '192.168.1.144', 'Sucesso'),
-  ('log-02', '25/05/2026 18:12', 'Rocha Santos', 'RS', 'bg-indigo-500', 'text-white', 'Edição de Dados cadastrais', 'Bruno Santos (Colaborador)', '192.168.1.144', 'Sucesso')
-on conflict (id) do update set
-  timestamp = excluded.timestamp,
-  user_name = excluded.user_name,
-  action = excluded.action,
-  ip = excluded.ip,
-  status = excluded.status;
 
 -- --------------------------------------------------
--- 9. SEED DATA: USER RECENT ACTIVITIES
+-- 9. SEED DATA: USER RECENT ACTIVITIES (Clean in production)
 -- --------------------------------------------------
-insert into activities (id, user_name, user_avatar, action, status, time)
-values
-  ('act-01', 'Bruno Santos', 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150', 'Iniciou o curso de Segurança da Informação e LGPD', 'Aprovado', 'Há 12 minutos'),
-  ('act-02', 'Carla Dias', 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150', 'Concluiu o exame de Código de Ética e Integridade', 'Sucesso', 'Há 25 minutos'),
-  ('act-03', 'Rocha Santos', 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150', 'Atualizou as configurações de Compliance do sistema', 'Sucesso', 'Há 1 hora')
-on conflict (id) do update set
-  user_name = excluded.user_name,
-  action = excluded.action,
-  status = excluded.status,
-  time = excluded.time;
 
 -- --------------------------------------------------
 -- 10. ROW LEVEL SECURITY (RLS) POLICIES & ACCESSIBILITY
@@ -234,6 +152,7 @@ create policy "Allow write of trainings for admins only" on trainings
 -- ACTIVITIES Table Policies
 drop policy if exists "Enable read access for all users" on activities;
 drop policy if exists "Enable insert access for all users" on activities;
+drop policy if exists "Allow delete of activities for everyone" on activities;
 
 create policy "Allow read of activities for everyone" on activities
   for select using (true);
@@ -241,15 +160,22 @@ create policy "Allow read of activities for everyone" on activities
 create policy "Allow creation of activities for registered accounts" on activities
   for insert with check (true);
 
+create policy "Allow delete of activities for everyone" on activities
+  for delete using (true);
+
 -- SYSTEM_LOGS Table Policies
 drop policy if exists "Enable read access for all users" on system_logs;
 drop policy if exists "Enable insert access for all users" on system_logs;
+drop policy if exists "Allow delete of system_logs for everyone" on system_logs;
 
 create policy "Allow read of audit logs only for admins" on system_logs
   for select using (exists (select 1 from users where role = 'admin'));
 
 create policy "Allow background registration of system logs" on system_logs
   for insert with check (true);
+
+create policy "Allow delete of system_logs for everyone" on system_logs
+  for delete using (true);
 
 
 -- --------------------------------------------------
@@ -299,30 +225,6 @@ values
 on conflict (id) do update set
   nome = excluded.nome,
   descricao = excluded.descricao;
-
-insert into questoes (id, curso_id, enunciado, explicacao)
-values
-  ('q1', 'tr-01', 'Qual das alternativas abaixo melhor descreve o principal objetivo da LGPD (Lei Geral de Proteção de Dados)?', 'A escuta empática ativa e o foco em ganha-ganha restabelecem a harmonia sem causar atrito ou ressentimentos futuros na equipe.'),
-  ('q2', 'tr-01', 'O que caracteriza um "dado pessoal sensível" segundo os preceitos da LGPD?', 'Dados sobre origem racial, convicção religiosa, opinião política, saúde ou vida sexual necessitam de proteção acrescida por envolverem foro íntimo sensível.')
-on conflict (id) do update set
-  curso_id = excluded.curso_id,
-  enunciado = excluded.enunciado,
-  explicacao = excluded.explicacao;
-
-insert into alternativas (id, questao_id, texto, correta)
-values
-  ('alt1_1', 'q1', 'Proibir a circulação e processamento de informações digitais.', false),
-  ('alt1_2', 'q1', 'Assegurar a privacidade e proteger dados pessoais de cidadãos regulando o seu tratamento.', true),
-  ('alt1_3', 'q1', 'Facilitar a comercialização irrestrita de dados cadastrais de clientes.', false),
-  ('alt1_4', 'q1', 'Garantir que todas as empresas tenham acesso livre a dados governamentais.', false),
-  ('alt2_1', 'q2', 'Informações públicas de contato como e-mails de canais de atendimento.', false),
-  ('alt2_2', 'q2', 'Dados relativos a faturamento corporativo e registros de receita da empresa.', false),
-  ('alt2_3', 'q2', 'Dados sobre origem racial, convicção religiosa, opinião política, saúde ou vida sexual.', true),
-  ('alt2_4', 'q2', 'Apenas informações financeiras como extrato bancário ou histórico de cartões.', false)
-on conflict (id) do update set
-  questao_id = excluded.questao_id,
-  texto = excluded.texto,
-  correta = excluded.correta;
 
 -- --------------------------------------------------
 -- 14. ROW LEVEL SECURITY (RLS) & POLICIES

@@ -10,8 +10,8 @@ interface LoginViewProps {
 }
 
 export default function LoginView({ onLogin, users, theme, setTheme }: LoginViewProps) {
-  const [email, setEmail] = useState('rocha.santos@dxon.com.br');
-  const [password, setPassword] = useState('123456');
+  const [email, setEmail] = useState('admin@admin.com');
+  const [password, setPassword] = useState('Admin@123');
   const [name, setName] = useState('');
   const [isRegistering, setIsRegistering] = useState(false);
   const [error, setError] = useState('');
@@ -89,7 +89,7 @@ export default function LoginView({ onLogin, users, theme, setTheme }: LoginView
         return;
       }
       
-      const correctPassword = localStorage.getItem(`educorporate_pwd_${lowercaseEmail}`) || '123456';
+      const correctPassword = localStorage.getItem(`educorporate_pwd_${lowercaseEmail}`) || (lowercaseEmail === 'admin@admin.com' ? 'Admin@123' : '123456');
       
       if (password !== correctPassword) {
         setError('Senha de segurança incorreta! Caso tenha esquecido, clique no link "Esqueceu a senha?" de recuperação.');
