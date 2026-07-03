@@ -216,7 +216,7 @@ export default function UserManagementView({ users, setUsers }: UserManagementVi
                   required
                   value={newEmail}
                   onChange={(e) => setNewEmail(e.target.value)}
-                  placeholder="Ex. thiago.s@educorp.com"
+                  placeholder="email@email.com"
                   className="w-full text-xs font-medium px-3.5 py-2 rounded-xl border border-slate-200 bg-white focus:ring-2 focus:ring-indigo-500 focus:outline-none"
                 />
               </div>

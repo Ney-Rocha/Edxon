@@ -85,7 +85,7 @@ export default function App() {
   const [isResetting, setIsResetting] = useState(false);
 
   const handleResetDb = async (skipConfirm = false) => {
-    if (!skipConfirm && !window.confirm("Atenção: deseja resetar e limpar o banco de dados? Todos os demais colaboradores e treinamentos inseridos serão excluídos, mantendo apenas o Admin e 1 treinamento padrão de exemplo.")) {
+    if (!skipConfirm && !window.confirm("Atenção: deseja resetar e limpar o banco de dados? Todos os colaboradores e treinamentos inseridos serão excluídos, mantendo apenas as contas de administrador.")) {
       return;
     }
     setIsResetting(true);

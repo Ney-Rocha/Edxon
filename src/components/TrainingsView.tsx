@@ -67,7 +67,7 @@ export default function TrainingsView({
         <div>
           <h2 className="text-2xl font-bold text-slate-950 tracking-tight">Catálogo de Treinamentos</h2>
           <p className="text-sm text-slate-500">
-            Veja e ministre as trilhas de conhecimento e gerencie novos conteúdos criados por IA.
+            Veja e ministre as trilhas de conhecimento e gerencie os conteúdos de aprendizagem.
           </p>
         </div>
         <button

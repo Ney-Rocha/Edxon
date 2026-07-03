@@ -551,7 +551,7 @@ export default function LoginView({ onLogin, users, theme, setTheme }: LoginView
                   id="email"
                   type="email"
                   required
-                  placeholder="exemplo@empresa.com"
+                  placeholder="email@email.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className={`w-full border rounded-xl py-3 pl-10 pr-4 text-xs font-semibold focus:outline-none focus:ring-4 transition-all ${
@@ -750,7 +750,7 @@ export default function LoginView({ onLogin, users, theme, setTheme }: LoginView
                         <input
                           type="email"
                           required
-                          placeholder="rocha.santos@dxon.com.br"
+                          placeholder="email@email.com"
                           value={recoveryEmail}
                           onChange={(e) => setRecoveryEmail(e.target.value)}
                           className={`w-full border rounded-xl py-2.5 pl-9 pr-3 text-xs font-semibold focus:outline-none transition-all ${
