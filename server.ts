@@ -25,6 +25,17 @@ async function startServer() {
   const app = express();
   const PORT = 3000;
 
+  // Pre-clean stale courses if Supabase is connected
+  try {
+    const client = getSupabaseClient();
+    if (client) {
+      console.log("[Server] Checking and cleaning up any stale training entries...");
+      await client.from("trainings").delete().ilike("title", "Liderança em Tempos de Crise");
+    }
+  } catch (e) {
+    console.warn("[Server] Stale training cleanup skipped on boot:", e);
+  }
+
   app.use(express.json({ limit: '50mb' }));
   app.use(express.urlencoded({ limit: '50mb', extended: true }));
 

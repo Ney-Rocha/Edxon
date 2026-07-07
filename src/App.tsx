@@ -78,6 +78,7 @@ export default function App() {
   // Core System States
   const [users, setUsers] = useState<User[]>(INITIAL_USERS);
   const [trainings, setTrainings] = useState<Training[]>(INITIAL_TRAININGS);
+  const [hasLoadedTrainings, setHasLoadedTrainings] = useState(false);
   const [recentActivities, setRecentActivities] = useState<RecentActivity[]>(INITIAL_ACTIVITIES);
   const [systemLogs, setSystemLogs] = useState<SystemLog[]>(INITIAL_SYSTEM_LOGS);
 
@@ -109,6 +110,7 @@ export default function App() {
           const valid = trainingsData.filter((t: any) => t && t.id);
           setTrainings(Array.from(new Map(valid.map((t: any) => [t.id, t])).values()));
         }
+        setHasLoadedTrainings(true);
         if (Array.isArray(activitiesData)) {
           const valid = activitiesData.filter((a: any) => a && a.id);
           setRecentActivities(Array.from(new Map(valid.map((a: any) => [a.id, a])).values()));
@@ -519,6 +521,39 @@ export default function App() {
     }
   }, [theme]);
 
+  // Proactive cleanup of local storage for old course names under any user account on application boot
+  useEffect(() => {
+    try {
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && (
+          key.startsWith("edxon_student_active_courses_") || 
+          key.startsWith("edxon_student_available_courses_") || 
+          key.startsWith("edxon_last_course_") || 
+          key === "edxon_local_trainings"
+        )) {
+          const value = localStorage.getItem(key);
+          if (value) {
+            if (key.startsWith("edxon_last_course_")) {
+              const parsed = JSON.parse(value);
+              if (parsed && (parsed.title === "Liderança em Tempos de Crise" || parsed.title === "Liderança em tempos de crise")) {
+                localStorage.removeItem(key);
+              }
+            } else {
+              const parsed = JSON.parse(value);
+              if (Array.isArray(parsed)) {
+                const filtered = parsed.filter((c: any) => c && c.title !== "Liderança em Tempos de Crise" && c.title !== "Liderança em tempos de crise");
+                localStorage.setItem(key, JSON.stringify(filtered));
+              }
+            }
+          }
+        }
+      }
+    } catch (e) {
+      console.warn("Storage cleanup failed:", e);
+    }
+  }, []);
+
   // Derived Logged In User
   const loggedInUser = users.find(u => u.email.toLowerCase() === (currentUserEmail || '').toLowerCase()) || null;
 
@@ -881,7 +916,7 @@ export default function App() {
 
   // Sync details from edits/deletions made by Admin back to student lists
   useEffect(() => {
-    if (!trainings || trainings.length === 0) return;
+    if (!hasLoadedTrainings || !trainings) return;
     setStudentAvailableCourses((prev) => {
       return prev
         .map((av) => {
