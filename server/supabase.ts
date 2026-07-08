@@ -7,7 +7,7 @@ let isConfigured = false;
 
 // Safe, persistent in-memory fallback store on the server if Supabase keys are not set
 let localUsers: User[] = [...INITIAL_USERS];
-let localTrainings: Training[] = [...INITIAL_TRAININGS].filter(t => t && t.title !== 'Liderança em Tempos de Crise' && t.title !== 'Liderança em tempos de crise');
+let localTrainings: Training[] = [...INITIAL_TRAININGS].filter(t => t && t.title !== 'Liderança em Tempos de Crise' && t.title !== 'Liderança em tempos de crise' && !t.title.toLowerCase().includes('teste terra 616'));
 let localActivities: RecentActivity[] = [...INITIAL_ACTIVITIES];
 let localLogs: SystemLog[] = [...INITIAL_SYSTEM_LOGS];
 let localCourseTypes: CourseType[] = [...INITIAL_COURSE_TYPES];
@@ -272,7 +272,7 @@ export async function getTrainings(): Promise<Training[]> {
         description: d.description,
         pdfUrl: d.pdf_url || d.pdfUrl,
         courseTypeId: d.tipo_curso_id || d.course_type_id || d.courseTypeId
-      })).filter((t: any) => t && t.title !== 'Liderança em Tempos de Crise' && t.title !== 'Liderança em tempos de crise') as Training[];
+      })).filter((t: any) => t && t.title !== 'Liderança em Tempos de Crise' && t.title !== 'Liderança em tempos de crise' && !t.title.toLowerCase().includes('teste terra 616')) as Training[];
     }
     // Seed trainings table if empty only if users table is also completely empty (suggests first-time boot)
     const { data: userData } = await client.from("users").select("id").limit(1);

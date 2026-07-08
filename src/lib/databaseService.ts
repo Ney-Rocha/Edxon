@@ -57,7 +57,7 @@ function setStoredValue<T>(key: string, value: T): void {
 }
 
 let localUsers: User[] = getStoredOrDefault("edxon_local_users", [...INITIAL_USERS]);
-let localTrainings: Training[] = getStoredOrDefault("edxon_local_trainings", [...INITIAL_TRAININGS]).filter(t => t && t.title !== 'Liderança em Tempos de Crise' && t.title !== 'Liderança em tempos de crise');
+let localTrainings: Training[] = getStoredOrDefault("edxon_local_trainings", [...INITIAL_TRAININGS]).filter(t => t && t.title !== 'Liderança em Tempos de Crise' && t.title !== 'Liderança em tempos de crise' && !t.title.toLowerCase().includes('teste terra 616'));
 let localActivities: RecentActivity[] = getStoredOrDefault("edxon_local_activities", [...INITIAL_ACTIVITIES]);
 let localLogs: SystemLog[] = getStoredOrDefault("edxon_local_logs", [...INITIAL_SYSTEM_LOGS]);
 let localCourseTypes: CourseType[] = getStoredOrDefault("edxon_local_course_types", [...INITIAL_COURSE_TYPES]);
@@ -274,7 +274,7 @@ export async function getTrainings(): Promise<Training[]> {
   if (mode === 'proxy') {
     return fetch("/api/db/trainings")
       .then(r => r.json())
-      .then((data: any[]) => Array.isArray(data) ? data.filter((t: any) => t && t.title !== 'Liderança em Tempos de Crise' && t.title !== 'Liderança em tempos de crise') : []);
+      .then((data: any[]) => Array.isArray(data) ? data.filter((t: any) => t && t.title !== 'Liderança em Tempos de Crise' && t.title !== 'Liderança em tempos de crise' && !t.title.toLowerCase().includes('teste terra 616')) : []);
   } else if (mode === 'direct' && supabaseDirect) {
     try {
       const { data, error } = await supabaseDirect.from("trainings").select("*");
@@ -293,7 +293,7 @@ export async function getTrainings(): Promise<Training[]> {
           description: d.description,
           pdfUrl: d.pdf_url || d.pdfUrl,
           courseTypeId: d.tipo_curso_id || d.course_type_id || d.courseTypeId
-        })).filter((t: any) => t && t.title !== 'Liderança em Tempos de Crise' && t.title !== 'Liderança em tempos de crise') as Training[];
+        })).filter((t: any) => t && t.title !== 'Liderança em Tempos de Crise' && t.title !== 'Liderança em tempos de crise' && !t.title.toLowerCase().includes('teste terra 616')) as Training[];
         setStoredValue("edxon_local_trainings", localTrainings);
         return localTrainings;
       }

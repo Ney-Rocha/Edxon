@@ -31,6 +31,7 @@ async function startServer() {
     if (client) {
       console.log("[Server] Checking and cleaning up any stale training entries...");
       await client.from("trainings").delete().ilike("title", "Liderança em Tempos de Crise");
+      await client.from("trainings").delete().ilike("title", "Teste terra 616");
     }
   } catch (e) {
     console.warn("[Server] Stale training cleanup skipped on boot:", e);

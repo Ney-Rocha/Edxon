@@ -536,13 +536,22 @@ export default function App() {
           if (value) {
             if (key.startsWith("edxon_last_course_")) {
               const parsed = JSON.parse(value);
-              if (parsed && (parsed.title === "Liderança em Tempos de Crise" || parsed.title === "Liderança em tempos de crise")) {
+              if (parsed && (
+                parsed.title === "Liderança em Tempos de Crise" || 
+                parsed.title === "Liderança em tempos de crise" || 
+                (parsed.title && parsed.title.toLowerCase().includes("teste terra 616"))
+              )) {
                 localStorage.removeItem(key);
               }
             } else {
               const parsed = JSON.parse(value);
               if (Array.isArray(parsed)) {
-                const filtered = parsed.filter((c: any) => c && c.title !== "Liderança em Tempos de Crise" && c.title !== "Liderança em tempos de crise");
+                const filtered = parsed.filter((c: any) => 
+                  c && 
+                  c.title !== "Liderança em Tempos de Crise" && 
+                  c.title !== "Liderança em tempos de crise" &&
+                  !(c.title && c.title.toLowerCase().includes("teste terra 616"))
+                );
                 localStorage.setItem(key, JSON.stringify(filtered));
               }
             }
@@ -562,7 +571,12 @@ export default function App() {
     try {
       const stored = localStorage.getItem(`edxon_student_active_courses_${currentUserEmail || 'guest'}`);
       const parsed = stored ? JSON.parse(stored) : STUDENT_ACTIVE_COURSES;
-      return Array.isArray(parsed) ? parsed.filter((c: any) => c.title !== 'Liderança em Tempos de Crise' && c.title !== 'Liderança em tempos de crise') : [];
+      return Array.isArray(parsed) ? parsed.filter((c: any) => 
+        c && 
+        c.title !== 'Liderança em Tempos de Crise' && 
+        c.title !== 'Liderança em tempos de crise' &&
+        !(c.title && c.title.toLowerCase().includes("teste terra 616"))
+      ) : [];
     } catch {
       return STUDENT_ACTIVE_COURSES;
     }
@@ -572,7 +586,12 @@ export default function App() {
     try {
       const stored = localStorage.getItem(`edxon_student_available_courses_${currentUserEmail || 'guest'}`);
       const parsed = stored ? JSON.parse(stored) : STUDENT_AVAILABLE_COURSES;
-      return Array.isArray(parsed) ? parsed.filter((c: any) => c.title !== 'Liderança em Tempos de Crise' && c.title !== 'Liderança em tempos de crise') : [];
+      return Array.isArray(parsed) ? parsed.filter((c: any) => 
+        c && 
+        c.title !== 'Liderança em Tempos de Crise' && 
+        c.title !== 'Liderança em tempos de crise' &&
+        !(c.title && c.title.toLowerCase().includes("teste terra 616"))
+      ) : [];
     } catch {
       return STUDENT_AVAILABLE_COURSES;
     }
@@ -621,11 +640,21 @@ export default function App() {
       try {
         const storedActive = localStorage.getItem(`edxon_student_active_courses_${currentUserEmail}`);
         const parsedActive = storedActive ? JSON.parse(storedActive) : STUDENT_ACTIVE_COURSES;
-        setStudentActiveCourses(Array.isArray(parsedActive) ? parsedActive.filter((c: any) => c.title !== 'Liderança em Tempos de Crise' && c.title !== 'Liderança em tempos de crise') : []);
+        setStudentActiveCourses(Array.isArray(parsedActive) ? parsedActive.filter((c: any) => 
+          c && 
+          c.title !== 'Liderança em Tempos de Crise' && 
+          c.title !== 'Liderança em tempos de crise' &&
+          !(c.title && c.title.toLowerCase().includes("teste terra 616"))
+        ) : []);
 
         const storedAvailable = localStorage.getItem(`edxon_student_available_courses_${currentUserEmail}`);
         const parsedAvailable = storedAvailable ? JSON.parse(storedAvailable) : STUDENT_AVAILABLE_COURSES;
-        setStudentAvailableCourses(Array.isArray(parsedAvailable) ? parsedAvailable.filter((c: any) => c.title !== 'Liderança em Tempos de Crise' && c.title !== 'Liderança em tempos de crise') : []);
+        setStudentAvailableCourses(Array.isArray(parsedAvailable) ? parsedAvailable.filter((c: any) => 
+          c && 
+          c.title !== 'Liderança em Tempos de Crise' && 
+          c.title !== 'Liderança em tempos de crise' &&
+          !(c.title && c.title.toLowerCase().includes("teste terra 616"))
+        ) : []);
       } catch {
         setStudentActiveCourses(STUDENT_ACTIVE_COURSES);
         setStudentAvailableCourses(STUDENT_AVAILABLE_COURSES);
