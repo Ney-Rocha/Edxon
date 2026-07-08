@@ -667,7 +667,7 @@ export default function ReportsView({
                         placeholder="Buscar aluno ou status..."
                         value={participationSearch}
                         onChange={(e) => setParticipationSearch(e.target.value)}
-                        className="w-full pl-8 pr-3 py-1.5 text-xs font-semibold border border-slate-250 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-slate-50/50"
+                        className="w-full pl-8 pr-3 py-1.5 text-xs font-semibold border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-slate-50/50"
                       />
                     </div>
                   </div>
