@@ -13,9 +13,7 @@ import {
   Info,
   Database,
   RefreshCw,
-  X,
-  Sun,
-  Moon
+  X
 } from 'lucide-react';
 import { ViewType, Role, User, Training, RecentActivity, SystemLog } from './types';
 import {
@@ -503,23 +501,15 @@ export default function App() {
   const [currentRole, setRole] = useState<Role>('usuario');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
-  // Light/Dark Theme management state
-  const [theme, setTheme] = useState<'light' | 'dark'>(() => {
-    return (localStorage.getItem('edxon_theme') as 'light' | 'dark') || 'dark';
-  });
+  // Light Theme default (dark version removed)
+  const theme = 'light';
 
   useEffect(() => {
-    safeSetLocalStorage('edxon_theme', theme);
-    if (theme === 'dark') {
-      document.documentElement.classList.add('dark');
-      document.body.classList.add('bg-[#000000]');
-      document.body.classList.remove('bg-slate-50', 'bg-white');
-    } else {
-      document.documentElement.classList.remove('dark');
-      document.body.classList.add('bg-slate-50');
-      document.body.classList.remove('bg-[#000000]');
-    }
-  }, [theme]);
+    safeSetLocalStorage('edxon_theme', 'light');
+    document.documentElement.classList.remove('dark');
+    document.body.classList.add('bg-slate-50');
+    document.body.classList.remove('bg-[#000000]');
+  }, []);
 
   // Proactive cleanup of local storage for old course names under any user account on application boot
   useEffect(() => {
@@ -1286,13 +1276,11 @@ export default function App() {
   const unreadCount = notifications.filter((n) => !n.isRead).length;
 
   if (!isLoggedIn) {
-    return <LoginView onLogin={handleLoginSuccess} users={users} theme={theme} setTheme={setTheme} />;
+    return <LoginView onLogin={handleLoginSuccess} users={users} />;
   }
 
   return (
-    <div className={`flex min-h-screen font-sans transition-colors duration-300 ${
-      theme === 'dark' ? 'bg-[#000000] text-slate-100 dark' : 'bg-slate-50 text-slate-800'
-    }`}>
+    <div className="flex min-h-screen font-sans transition-colors duration-300 bg-slate-50 text-slate-800">
       {/* Side bar Navigation (Left) */}
       <Navigation
         currentView={currentView}
@@ -1306,9 +1294,7 @@ export default function App() {
       {/* Main Page Area Container (Right) */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Top Global Navigation Bar */}
-        <header className={`h-16 border-b px-4 sm:px-6 flex items-center justify-between gap-4 shrink-0 shadow-sm z-20 transition-all duration-300 ${
-          theme === 'dark' ? 'bg-[#0c0c0c] border-neutral-900' : 'bg-white border-slate-200/80'
-        }`}>
+        <header className="h-16 border-b px-4 sm:px-6 flex items-center justify-between gap-4 shrink-0 shadow-sm z-20 transition-all duration-300 bg-white border-slate-200/80">
           {/* Quick Header Indicators */}
           <div className="flex items-center gap-2">
             <button
@@ -1322,19 +1308,6 @@ export default function App() {
 
           {/* Right Controls bar */}
           <div className="flex items-center space-x-4">
-
-            {/* Theme Toggle Button */}
-            <button
-              onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-              className={`p-2 rounded-xl border transition-all cursor-pointer hover:scale-105 active:scale-95 ${
-                theme === 'dark' 
-                  ? 'bg-neutral-900 border-neutral-800 text-yellow-400 hover:bg-neutral-800' 
-                  : 'bg-slate-100 border-slate-200 text-slate-600 hover:bg-slate-200'
-              }`}
-              title={theme === 'dark' ? 'Modo Claro' : 'Modo Escuro'}
-            >
-              {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4 text-slate-500" />}
-            </button>
 
             {/* Notification Badge indicator */}
             <div className="relative">

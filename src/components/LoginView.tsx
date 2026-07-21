@@ -1,16 +1,16 @@
 import React, { useState } from 'react';
-import { Shield, User, Lock, ArrowRight, Mail, X, Sun, Moon, CheckCircle2, Eye, EyeOff, GraduationCap } from 'lucide-react';
+import { Shield, User, Lock, ArrowRight, Mail, X, CheckCircle2, Eye, EyeOff, GraduationCap } from 'lucide-react';
 import { User as UserType } from '../types';
 import { supabaseDirect, getDatabaseMode } from '../lib/databaseService';
 
 interface LoginViewProps {
   onLogin: (name: string, email: string) => void;
   users: UserType[];
-  theme: 'light' | 'dark';
-  setTheme: (t: 'light' | 'dark') => void;
+  theme?: 'light' | 'dark';
+  setTheme?: (t: 'light' | 'dark') => void;
 }
 
-export default function LoginView({ onLogin, users, theme, setTheme }: LoginViewProps) {
+export default function LoginView({ onLogin, users, theme = 'light' }: LoginViewProps) {
   const [email, setEmail] = useState('rocha.santos@dxon.com.br');
   const [password, setPassword] = useState('123456');
   const [name, setName] = useState('');
@@ -431,24 +431,6 @@ export default function LoginView({ onLogin, users, theme, setTheme }: LoginView
         <div className={`absolute top-1/2 -left-24 w-64 h-64 rounded-full blur-2xl transition-opacity duration-500 ${
           isDarkMode ? 'bg-emerald-700/5' : 'bg-emerald-500/10'
         }`} />
-      </div>
-
-      {/* Theme Toggle Button (Clean floating at the top right) */}
-      <div className="absolute top-6 right-6 z-20">
-        <button
-          onClick={() => setTheme(isDarkMode ? 'light' : 'dark')}
-          className={`p-2.5 rounded-xl border transition-all flex items-center gap-1.5 text-xs font-bold cursor-pointer hover:scale-105 active:scale-95 ${
-            isDarkMode 
-              ? 'bg-neutral-900 border-neutral-800 text-yellow-400 hover:bg-neutral-800' 
-              : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50 shadow-sm'
-          }`}
-          title={isDarkMode ? 'Mudar para Modo Claro' : 'Mudar para Modo Escuro'}
-        >
-          {isDarkMode ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4 text-slate-500" />}
-          <span className="hidden sm:inline text-[9px] tracking-wider uppercase">
-            {isDarkMode ? 'Claro' : 'Escuro'}
-          </span>
-        </button>
       </div>
 
       {/* Main Centered Content Container */}
